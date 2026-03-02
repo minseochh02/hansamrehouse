@@ -84,7 +84,11 @@ export function LineItemTableCompact({
               return (
                 <tr
                   key={item.id}
-                  className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border-b border-zinc-50 dark:border-zinc-900"
+                  className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border-b border-zinc-50 dark:border-zinc-900 ${
+                    activeFilter?.type === 'vendorName' && matchedRequests.some(r => r.vendorName === activeFilter.value)
+                      ? "bg-emerald-50 dark:bg-emerald-900/20"
+                      : ""
+                  }`}
                 >
                   {idx === 0 ? (
                     <td

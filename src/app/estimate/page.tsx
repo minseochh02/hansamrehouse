@@ -516,7 +516,7 @@ export default function EstimatePage() {
 
       {/* 내역서 Section */}
       <div className={`mx-auto px-4 sm:px-6 py-8 transition-all duration-500 ${isSplitView ? "max-w-[98%]" : "max-w-[1600px]"}`}>
-        <div className={`grid gap-8 ${isSplitView ? "grid-cols-1 xl:grid-cols-[3fr_7fr]" : "grid-cols-1"}`}>
+        <div className={`grid gap-8 ${isSplitView ? "grid-cols-1 xl:grid-cols-[4fr_6fr]" : "grid-cols-1"}`}>
           {/* Left Column: Regular Line Items */}
           <div className={`bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm transition-all ${isSplitView ? "h-[800px] flex flex-col" : ""}`}>
             <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/20 sticky top-0 z-10">
@@ -593,6 +593,7 @@ export default function EstimatePage() {
                     onOpenDrawer={handleOpenSpendingDrawer}
                     onCloseDrawer={() => setIsSpendingDrawerOpen(false)}
                     activeFilter={spendingFilter}
+                    onFilterChange={setSpendingFilter}
                   />
                 </div>
               )}

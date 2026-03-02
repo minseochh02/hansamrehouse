@@ -19,6 +19,7 @@ export function SpendingRequestTable({
   onOpenDrawer,
   onCloseDrawer,
   activeFilter,
+  onFilterChange,
 }: { 
   items: SpendingRequestItem[];
   lineItems?: EstimateLineItem[];
@@ -30,6 +31,7 @@ export function SpendingRequestTable({
   onOpenDrawer: (item: SpendingRequestItem | null) => void;
   onCloseDrawer: () => void;
   activeFilter?: SpendingFilter;
+  onFilterChange?: (filter: SpendingFilter) => void;
 }) {
   const [hoveredContent, setHoveredContent] = useState<{ text: string; x: number; y: number } | null>(null);
 
@@ -63,8 +65,18 @@ export function SpendingRequestTable({
     if (activeFilter.type === 'category') return item.processName === activeFilter.value;
     if (activeFilter.type === 'subCategory') return item.subProcessName === activeFilter.value;
     if (activeFilter.type === 'itemName') return item.itemName === activeFilter.value;
+    if (activeFilter.type === 'vendorName') return item.vendorName === activeFilter.value;
     return true;
   });
+
+  const handleFilterClick = (type: SpendingFilter['type'], value: string) => {
+    if (!onFilterChange) return;
+    if (activeFilter?.type === type && activeFilter?.value === value) {
+      onFilterChange({ type: 'none', value: '' });
+    } else {
+      onFilterChange({ type, value });
+    }
+  };
 
   const totalActual = filteredItems.reduce((sum, item) => sum + (item.totalSpendingActual || 0), 0);
 
@@ -87,8 +99,8 @@ export function SpendingRequestTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-200 dark:border-zinc-700 text-left bg-zinc-50/50 dark:bg-zinc-800/20">
-              <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider group">
-                <div className="flex items-center">품목명 <FilterIcon /></div>
+              <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                <div className="flex items-center">품목명</div>
               </th>
               <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider group">
                 <div className="flex items-center">협력업체 <FilterIcon /></div>
@@ -117,7 +129,15 @@ export function SpendingRequestTable({
                   onClick={() => onOpenDrawer(item)}
                 >
                   <td 
-                    className="px-2 py-2 text-zinc-600 dark:text-zinc-400 cursor-help"
+                    className={`px-2 py-2 text-zinc-600 dark:text-zinc-400 cursor-help transition-colors ${
+                      activeFilter?.type === 'itemName' && activeFilter?.value === item.itemName
+                        ? "bg-emerald-100 dark:bg-emerald-900/40"
+                        : ""
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFilterClick('itemName', item.itemName);
+                    }}
                     onMouseEnter={(e) => setHoveredContent({ text: item.itemName, x: e.clientX, y: e.clientY })}
                     onMouseMove={(e) => setHoveredContent({ text: item.itemName, x: e.clientX, y: e.clientY })}
                     onMouseLeave={() => setHoveredContent(null)}
@@ -125,7 +145,17 @@ export function SpendingRequestTable({
                     <div className="truncate max-w-[200px]">{item.itemName}</div>
                   </td>
                   <td 
-                    className="px-2 py-2 text-zinc-600 dark:text-zinc-100 font-medium cursor-help"
+                    className={`px-2 py-2 text-zinc-600 dark:text-zinc-100 font-medium cursor-help transition-colors ${
+                      activeFilter?.type === 'vendorName' && activeFilter?.value === item.vendorName
+                        ? "bg-emerald-100 dark:bg-emerald-900/40"
+                        : ""
+                    }`}
+                    onClick={(e) => {
+                      if (item.vendorName) {
+                        e.stopPropagation();
+                        handleFilterClick('vendorName', item.vendorName);
+                      }
+                    }}
                     onMouseEnter={(e) => item.vendorName && setHoveredContent({ text: item.vendorName, x: e.clientX, y: e.clientY })}
                     onMouseMove={(e) => item.vendorName && setHoveredContent({ text: item.vendorName, x: e.clientX, y: e.clientY })}
                     onMouseLeave={() => setHoveredContent(null)}

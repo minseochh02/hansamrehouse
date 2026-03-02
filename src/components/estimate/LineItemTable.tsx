@@ -132,8 +132,8 @@ export function LineItemTable({
             <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-24 group">
               <div className="flex items-center">세부공정 <FilterIcon /></div>
             </th>
-            <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider min-w-[200px] group">
-              <div className="flex items-center">품목명 <FilterIcon /></div>
+            <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider min-w-[200px]">
+              <div className="flex items-center">품목명</div>
             </th>
             <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-center w-14">단위</th>
             <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right w-16">수량</th>
@@ -169,7 +169,11 @@ export function LineItemTable({
               return (
                 <tr
                   key={item.id}
-                  className="border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
+                  className={`border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${
+                    activeFilter?.type === 'vendorName' && matchedRequests.some(r => r.vendorName === activeFilter.value)
+                      ? "bg-emerald-50 dark:bg-emerald-900/20"
+                      : ""
+                  }`}
                 >
                   <td className="px-2 py-1.5 text-zinc-400 font-mono text-xs">{item.id}</td>
                   {idx === 0 ? (

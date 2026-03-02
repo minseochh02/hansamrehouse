@@ -123,6 +123,6 @@ export interface Estimate {
 }
 
 export interface SpendingFilter {
-  type: "category" | "subCategory" | "itemName" | "none";
+  type: "category" | "subCategory" | "itemName" | "vendorName" | "none";
   value: string;
 }
