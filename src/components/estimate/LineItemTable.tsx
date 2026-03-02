@@ -14,6 +14,7 @@ export function LineItemTable({
   onDeleteItem,
   spendingRequests = [],
   onMapToSpendingRequest,
+  onMapToAdditionalItem,
   activeFilter,
   onFilterChange,
 }: { 
@@ -23,9 +24,21 @@ export function LineItemTable({
   onDeleteItem: (id: string) => void;
   spendingRequests?: SpendingRequestItem[];
   onMapToSpendingRequest?: (item: EstimateLineItem) => void;
+  onMapToAdditionalItem?: (item: EstimateLineItem) => void;
   activeFilter?: SpendingFilter;
   onFilterChange?: (filter: SpendingFilter) => void;
 }) {
+  const [newItem, setNewItem] = useState<Omit<EstimateLineItem, "id" | "amount" | "unitPrice">>({
+    category: "",
+    subCategory: "",
+    name: "",
+    unit: "식",
+    quantity: 1,
+    materialUnitPrice: 0,
+    laborUnitPrice: 0,
+    expenseUnitPrice: 0,
+    note: "",
+  });
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null); // id for existing item
   const [tempNote, setTempNote] = useState("");
   const [hoveredContent, setHoveredContent] = useState<{ text: string; x: number; y: number } | null>(null);
@@ -41,6 +54,26 @@ export function LineItemTable({
   const grandTotalActualLabor = spendingRequests.reduce((sum, r) => sum + (r.laborActualCost || 0), 0);
   const grandTotalActualExpense = spendingRequests.reduce((sum, r) => sum + (r.expenseActualCost || 0), 0);
   const grandTotalActual = grandTotalActualMaterial + grandTotalActualLabor + grandTotalActualExpense;
+
+  const handleAddNewItem = () => {
+    if (newItem.name || newItem.category) {
+      const unitPrice = Number(newItem.materialUnitPrice || 0) + 
+                        Number(newItem.laborUnitPrice || 0) + 
+                        Number(newItem.expenseUnitPrice || 0);
+      onAddItem({ ...newItem, unitPrice } as any);
+      setNewItem({
+        category: "",
+        subCategory: "",
+        name: "",
+        unit: "식",
+        quantity: 1,
+        materialUnitPrice: 0,
+        laborUnitPrice: 0,
+        expenseUnitPrice: 0,
+        note: "",
+      });
+    }
+  };
 
   const openNoteEditor = (id: string, initialNote: string) => {
     setActiveNoteId(id);
@@ -146,6 +179,104 @@ export function LineItemTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          {/* New Line Item Input Row */}
+          <tr className="border-b-2 border-indigo-100 dark:border-indigo-900/30 bg-indigo-50/30 dark:bg-indigo-900/10 transition-colors">
+            <td className="px-2 py-2 text-center text-indigo-400 font-bold">+</td>
+            <td className="px-2 py-2">
+              <input
+                type="text"
+                placeholder="공정..."
+                value={newItem.category}
+                onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+                className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </td>
+            <td className="px-2 py-2">
+              <input
+                type="text"
+                placeholder="세부..."
+                value={newItem.subCategory}
+                onChange={(e) => setNewItem({ ...newItem, subCategory: e.target.value })}
+                className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </td>
+            <td className="px-2 py-2">
+              <input
+                type="text"
+                placeholder="품목명 입력..."
+                value={newItem.name}
+                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </td>
+            <td className="px-2 py-2 text-center text-zinc-500 text-xs">
+              {newItem.unit}
+            </td>
+            <td className="px-2 py-2">
+              <input
+                type="number"
+                placeholder="0"
+                value={newItem.quantity || ""}
+                onChange={(e) => setNewItem({ ...newItem, quantity: Number(e.target.value) })}
+                className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 text-xs text-right font-mono focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              />
+            </td>
+            <td className="px-2 py-2">
+              <div className="flex gap-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded p-0.5 shadow-sm">
+                <input
+                  type="number"
+                  placeholder="재료"
+                  value={newItem.materialUnitPrice || ""}
+                  onChange={(e) => setNewItem({ ...newItem, materialUnitPrice: Number(e.target.value) })}
+                  className="w-full bg-transparent border-none focus:ring-0 px-1 py-0.5 text-right text-[10px] font-mono"
+                  title="재료비"
+                />
+                <input
+                  type="number"
+                  placeholder="노무"
+                  value={newItem.laborUnitPrice || ""}
+                  onChange={(e) => setNewItem({ ...newItem, laborUnitPrice: Number(e.target.value) })}
+                  className="w-full bg-transparent border-none focus:ring-0 px-1 py-0.5 text-right text-[10px] font-mono border-l border-zinc-100 dark:border-zinc-700"
+                  title="노무비"
+                />
+                <input
+                  type="number"
+                  placeholder="경비"
+                  value={newItem.expenseUnitPrice || ""}
+                  onChange={(e) => setNewItem({ ...newItem, expenseUnitPrice: Number(e.target.value) })}
+                  className="w-full bg-transparent border-none focus:ring-0 px-1 py-0.5 text-right text-[10px] font-mono border-l border-zinc-100 dark:border-zinc-700"
+                  title="경비"
+                />
+              </div>
+            </td>
+            <td className="px-2 py-2 text-right font-mono font-medium text-indigo-600 dark:text-indigo-400">
+              {((Number(newItem.materialUnitPrice || 0) + Number(newItem.laborUnitPrice || 0) + Number(newItem.expenseUnitPrice || 0)) * Number(newItem.quantity || 0)).toLocaleString()}
+            </td>
+            <td className="px-2 py-2 text-center">
+              <button
+                onClick={() => {
+                  const note = prompt("비고 내용을 입력하세요", newItem.note);
+                  if (note !== null) setNewItem({ ...newItem, note });
+                }}
+                className={`p-1.5 rounded transition-colors ${newItem.note ? 'text-indigo-600 bg-indigo-50' : 'text-zinc-300 hover:bg-zinc-100'}`}
+                title={newItem.note || "비고 입력"}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            </td>
+            <td className="px-2 py-2 text-center">
+              <button
+                onClick={handleAddNewItem}
+                className="p-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white transition-colors shadow-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </td>
+          </tr>
           {categories.map((cat) => {
             const catItems = items.filter((item) => item.category === cat);
             const subtotal = catItems.reduce((sum, item) => sum + item.amount, 0);
@@ -321,10 +452,21 @@ export function LineItemTable({
                   </td>
                   <td className="px-2 py-1.5 text-center">
                     <div className="flex items-center justify-center gap-1">
+                      {onMapToAdditionalItem && (
+                        <button
+                          onClick={() => onMapToAdditionalItem(item)}
+                          className="p-1.5 rounded-md text-zinc-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
+                          title="추가 견적서로 매핑"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      )}
                       {onMapToSpendingRequest && (
                         <button
                           onClick={() => onMapToSpendingRequest(item)}
-                          className="p-1.5 rounded-md text-zinc-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
+                          className="p-1.5 rounded-md text-zinc-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
                           title="지출결의서로 매핑"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

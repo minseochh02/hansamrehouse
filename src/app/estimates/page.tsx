@@ -58,13 +58,24 @@ export default function EstimatesPage() {
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
-              견적 내역
-            </h1>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              전체 견적 목록을 확인하고 관리합니다.
-            </p>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              title="홈으로 돌아가기"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
+                견적 내역
+              </h1>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+                전체 견적 목록을 확인하고 관리합니다.
+              </p>
+            </div>
           </div>
           <Link
             href="/customer-info"

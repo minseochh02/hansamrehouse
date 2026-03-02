@@ -44,7 +44,7 @@ export interface SpendingRequestItem {
   processName: string; // 공정명
   subProcessName: string; // 세부공정명
   itemName: string; // 품목명
-  status: "최초" | "변경" | "취소"; // 상태
+  status?: "최초" | "변경" | "취소"; // 상태 (Deprecated)
   
   // 비용 내역
   materialEstimateCost: number; // 재료비견적가
@@ -92,7 +92,8 @@ export interface SpendingRequestItem {
   memo: string; // 메모
   date: string; // 일자
   contactInfo: string; // 관련자연락처
-  paymentStatus: "대기" | "완료" | "반려"; // 결제상태
+  paymentStatus: "대기" | "완료" | "반려" | "임시저장"; // 결제상태
+  isAdditional?: boolean; // 추가 견적 항목 여부
   createdAt: string; // 최초등록일
   updatedAt: string; // 최종수정일
 }

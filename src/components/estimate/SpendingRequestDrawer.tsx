@@ -40,7 +40,6 @@ export function SpendingRequestDrawer({
         processName: "",
         subProcessName: "",
         itemName: "",
-        status: "최초",
         materialEstimateCost: 0,
         materialActualCost: 0,
         laborEstimateCost: 0,
@@ -130,7 +129,7 @@ export function SpendingRequestDrawer({
       <div className="fixed inset-y-0 right-0 w-[480px] bg-white dark:bg-zinc-900 shadow-[-8px_0_24px_-12px_rgba(0,0,0,0.3)] dark:shadow-[-8px_0_24px_-12px_rgba(0,0,0,0.7)] z-50 flex flex-col animate-in slide-in-from-right duration-300 border-l border-zinc-200 dark:border-zinc-800">
         <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-white dark:bg-zinc-900 sticky top-0 z-10">
           <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-            {item ? "지출결의서 수정" : "새 지출결의서"}
+            {item ? "지출결의서 수정" : "지출결의서 제출"}
           </h2>
           <button 
             onClick={onClose}
@@ -174,18 +173,6 @@ export function SpendingRequestDrawer({
                 />
               </div>
               <div>
-                <Label>상태</Label>
-                <select
-                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
-                  value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value as any)}
-                >
-                  <option value="최초">최초</option>
-                  <option value="변경">변경</option>
-                  <option value="취소">취소</option>
-                </select>
-              </div>
-              <div>
                 <Label>일자</Label>
                 <Input 
                   type="date"
@@ -199,7 +186,7 @@ export function SpendingRequestDrawer({
                   id="isUrgentToday"
                   checked={formData.isUrgentToday}
                   onChange={(e) => handleChange("isUrgentToday", e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                  className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label htmlFor="isUrgentToday" className="text-sm font-medium text-red-600">당일긴급여부</label>
               </div>
@@ -230,7 +217,7 @@ export function SpendingRequestDrawer({
                   id="isExistingVendorAccount"
                   checked={formData.isExistingVendorAccount}
                   onChange={(e) => handleChange("isExistingVendorAccount", e.target.checked)}
-                  className="w-4 h-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+                  className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label htmlFor="isExistingVendorAccount" className="text-sm font-medium">기존거래처계좌</label>
               </div>
@@ -260,23 +247,20 @@ export function SpendingRequestDrawer({
               </div>
 
               <div className="pt-6 border-t border-zinc-100 dark:border-zinc-800 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">3.3% 원천징수 섹션</span>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="hasTaxDeduction"
-                      checked={formData.hasTaxDeduction}
-                      onChange={(e) => handleChange("hasTaxDeduction", e.target.checked)}
-                      className="w-4 h-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <label htmlFor="hasTaxDeduction" className="text-sm font-medium">3.3% 공제 여부</label>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="hasTaxDeduction"
+                    checked={formData.hasTaxDeduction}
+                    onChange={(e) => handleChange("hasTaxDeduction", e.target.checked)}
+                    className="w-4 h-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="hasTaxDeduction" className="text-sm font-bold text-zinc-900 dark:text-zinc-100">3.3% 원천징수</label>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>3.3% 공제전금액</Label>
+                    <Label>공제전금액</Label>
                     <Input 
                       type="number"
                       value={formData.amountBeforeTax || ""} 
@@ -284,14 +268,14 @@ export function SpendingRequestDrawer({
                     />
                   </div>
                   <div>
-                    <Label>3.3% 공제금액</Label>
+                    <Label>공제금액</Label>
                     <div className="pt-2">
                       <Badge color="zinc">{(taxDeductionAmount || 0).toLocaleString()} 원</Badge>
                     </div>
                   </div>
                   <div className="col-span-2">
                     <Label>최종 입금액</Label>
-                    <Badge color="emerald">{(finalDepositAmount || 0).toLocaleString()} 원</Badge>
+                    <Badge color="blue">{(finalDepositAmount || 0).toLocaleString()} 원</Badge>
                   </div>
                 </div>
               </div>
@@ -316,6 +300,7 @@ export function SpendingRequestDrawer({
                 type="number"
                 value={formData.materialEstimateCost || ""} 
                 onChange={(e) => handleChange("materialEstimateCost", Number(e.target.value))}
+                disabled
               />
               <div className="pt-2"><Badge color="zinc">{(materialPreviouslySpent || 0).toLocaleString()}</Badge></div>
               <Input 
@@ -334,6 +319,7 @@ export function SpendingRequestDrawer({
                 type="number"
                 value={formData.laborEstimateCost || ""} 
                 onChange={(e) => handleChange("laborEstimateCost", Number(e.target.value))}
+                disabled
               />
               <div className="pt-2"><Badge color="zinc">{(laborPreviouslySpent || 0).toLocaleString()}</Badge></div>
               <Input 
@@ -352,6 +338,7 @@ export function SpendingRequestDrawer({
                 type="number"
                 value={formData.expenseEstimateCost || ""} 
                 onChange={(e) => handleChange("expenseEstimateCost", Number(e.target.value))}
+                disabled
               />
               <div className="pt-2"><Badge color="zinc">{(expensePreviouslySpent || 0).toLocaleString()}</Badge></div>
               <Input 
@@ -380,7 +367,7 @@ export function SpendingRequestDrawer({
               </div>
               <div>
                 <Label>지출결의 합계</Label>
-                <Badge color="emerald">{(totalSpendingActual || 0).toLocaleString()} 원</Badge>
+                <Badge color="blue">{(totalSpendingActual || 0).toLocaleString()} 원</Badge>
               </div>
             </div>
           </Section>
@@ -394,32 +381,87 @@ export function SpendingRequestDrawer({
             <div className="space-y-4">
               <div>
                 <Label>증빙종류</Label>
-                <Input 
-                  value={formData.evidenceType || ""} 
-                  onChange={(e) => handleChange("evidenceType", e.target.value)}
-                  placeholder="예: 세금계산서, 영수증"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>증빙사진 (URL)</Label>
-                  <Input 
-                    value={formData.evidencePhotoUrl || ""} 
-                    onChange={(e) => handleChange("evidencePhotoUrl", e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>작업현황표 (URL)</Label>
-                  <Input 
-                    value={formData.workStatusSheetUrl || ""} 
-                    onChange={(e) => handleChange("workStatusSheetUrl", e.target.value)}
-                  />
+                <div className="flex flex-wrap gap-2">
+                  {["세금계산서", "작업표", "영수증", "RD 지출 영수증", "구매요청"].map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => handleChange("evidenceType", type)}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                        formData.evidenceType === type
+                          ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-zinc-900"
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div>
+
+              {formData.evidenceType && (
+                <div className="pt-2">
+                  {formData.evidenceType === "작업표" ? (
+                    <div>
+                      <Label>작업현황표</Label>
+                      <textarea
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all h-32"
+                        value={formData.workStatusSheetUrl || ""}
+                        onChange={(e) => handleChange("workStatusSheetUrl", e.target.value)}
+                        placeholder="작업 현황 및 내용을 상세히 입력하세요"
+                      />
+                    </div>
+                  ) : formData.evidenceType === "구매요청" ? (
+                    <div className="space-y-4">
+                      <div>
+                        <Label>구매링크 (URL)</Label>
+                        <Input 
+                          value={formData.purchaseLink || ""} 
+                          onChange={(e) => handleChange("purchaseLink", e.target.value)}
+                          placeholder="구매 링크를 입력하세요"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>배송지구분</Label>
+                          <Input 
+                            value={formData.deliveryType || ""} 
+                            onChange={(e) => handleChange("deliveryType", e.target.value)}
+                            placeholder="예: 현장, 사무실"
+                          />
+                        </div>
+                        <div>
+                          <Label>처리시한메모</Label>
+                          <Input 
+                            value={formData.deadlineMemo || ""} 
+                            onChange={(e) => handleChange("deadlineMemo", e.target.value)}
+                            placeholder="예: 내일 오전까지"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <Label>증빙사진 (URL)</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          value={formData.evidencePhotoUrl || ""} 
+                          onChange={(e) => handleChange("evidencePhotoUrl", e.target.value)}
+                          placeholder="이미지 링크를 입력하거나 업로드하세요"
+                        />
+                        <button className="px-3 py-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-xs font-semibold whitespace-nowrap hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors">
+                          파일 선택
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="pt-2">
                 <Label>증빙등록안내문구</Label>
                 <textarea
-                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all h-20"
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all h-20"
                   value={formData.evidenceGuide || ""}
                   onChange={(e) => handleChange("evidenceGuide", e.target.value)}
                 />
@@ -427,39 +469,7 @@ export function SpendingRequestDrawer({
             </div>
           </Section>
 
-          {/* 6. 구매/배송 */}
-          <Section 
-            title="구매/배송" 
-            isOpen={openSections.delivery} 
-            onToggle={() => setOpenSections(prev => ({ ...prev, delivery: !prev.delivery }))}
-          >
-            <div className="space-y-4">
-              <div>
-                <Label>구매링크</Label>
-                <Input 
-                  value={formData.purchaseLink || ""} 
-                  onChange={(e) => handleChange("purchaseLink", e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>배송지구분</Label>
-                <Input 
-                  value={formData.deliveryType || ""} 
-                  onChange={(e) => handleChange("deliveryType", e.target.value)}
-                  placeholder="예: 현장, 사무실"
-                />
-              </div>
-              <div>
-                <Label>처리시한메모</Label>
-                <Input 
-                  value={formData.deadlineMemo || ""} 
-                  onChange={(e) => handleChange("deadlineMemo", e.target.value)}
-                />
-              </div>
-            </div>
-          </Section>
-
-          {/* 7. 기타 */}
+          {/* 6. 기타 */}
           <Section 
             title="기타" 
             isOpen={openSections.others} 
@@ -469,24 +479,30 @@ export function SpendingRequestDrawer({
               <div>
                 <Label>메모</Label>
                 <textarea
-                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all h-20"
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all h-20"
                   value={formData.memo || ""}
                   onChange={(e) => handleChange("memo", e.target.value)}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>관련자 연락처</Label>
-                  <Input 
-                    value={formData.contactInfo || ""} 
-                    onChange={(e) => handleChange("contactInfo", e.target.value)}
-                  />
-                </div>
-                <div />
-                <div>
-                  <Label>최초등록일</Label>
-                  <div className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">{formData.createdAt}</div>
-                </div>
+              <div>
+                <Label>결제 상태</Label>
+                <select
+                  value={formData.paymentStatus || "대기"}
+                  onChange={(e) => handleChange("paymentStatus", e.target.value)}
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all dark:text-zinc-100"
+                >
+                  <option value="임시저장">임시저장</option>
+                  <option value="대기">결제대기</option>
+                  <option value="완료">결제완료</option>
+                  <option value="반려">반려됨</option>
+                </select>
+              </div>
+              <div />
+              <div>
+                <Label>최초등록일</Label>
+                <div className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">{formData.createdAt}</div>
+              </div>
                 <div>
                   <Label>최종수정일</Label>
                   <div className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">{formData.updatedAt}</div>
@@ -505,9 +521,9 @@ export function SpendingRequestDrawer({
           </button>
           <button
             onClick={handleSave}
-            className="flex-[2] px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors shadow-lg shadow-emerald-600/20"
+            className="flex-[2] px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors shadow-lg shadow-blue-600/20"
           >
-            저장
+            {formData.paymentStatus === '임시저장' ? '임시저장' : '제출완료'}
           </button>
         </div>
       </div>
@@ -539,17 +555,17 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all disabled:bg-zinc-50 dark:disabled:bg-zinc-800 disabled:text-zinc-400"
+      className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all disabled:bg-zinc-50 dark:disabled:bg-zinc-800 disabled:text-zinc-400"
     />
   );
 }
 
-function Badge({ children, color = "emerald" }: { children: React.ReactNode; color?: string }) {
+function Badge({ children, color = "blue" }: { children: React.ReactNode; color?: string }) {
   const colors: Record<string, string> = {
-    emerald: "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
     blue: "bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800",
     zinc: "bg-zinc-50 text-zinc-700 border-zinc-100 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700",
     red: "bg-red-50 text-red-700 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
+    amber: "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
   };
   return (
     <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-mono font-bold border ${colors[color]}`}>

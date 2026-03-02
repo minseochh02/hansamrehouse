@@ -93,7 +93,6 @@ export default function EstimatePage() {
       processName: lineItem.category,
       subProcessName: lineItem.subCategory,
       itemName: lineItem.name,
-      status: "최초",
       materialEstimateCost: matEst,
       materialActualCost: 0,
       laborEstimateCost: labEst,
@@ -125,7 +124,7 @@ export default function EstimatePage() {
       memo: "",
       date: now,
       contactInfo: "",
-      paymentStatus: "대기",
+      paymentStatus: "임시저장",
       createdAt: now,
       updatedAt: now,
     };
@@ -134,7 +133,24 @@ export default function EstimatePage() {
     setRightPanelMode("spending");
   };
 
+  const handleMapLineItemToAdditional = (lineItem: EstimateLineItem) => {
+    const now = new Date().toISOString().split('T')[0];
+    const newItem: Omit<AdditionalLineItem, "id" | "totalAmount"> = {
+      requestDate: now,
+      location: lineItem.subCategory || lineItem.category,
+      name: lineItem.name,
+      additionalAmount: 0,
+      originalAmount: lineItem.amount,
+    };
+    addAdditionalItem(newItem);
+    setRightPanelMode("additional");
+  };
+
   const isSplitView = rightPanelMode !== "none";
+
+  const totalSpendingActual = estimate.spendingRequests.reduce((sum, req) => sum + (req.totalSpendingActual || 0), 0);
+  const margin = estimate.totalAmount - totalSpendingActual;
+  const marginPercent = estimate.totalAmount > 0 ? (margin / estimate.totalAmount) * 100 : 0;
 
   // Automatically close right panels if status changes and they are no longer allowed
   useEffect(() => {
@@ -336,11 +352,20 @@ export default function EstimatePage() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       {/* Top Bar with Collapsible Overview */}
-      <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-20">
+      <div className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-30">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
           {/* Summary Row */}
           <div className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3 flex-wrap">
+              <Link
+                href="/estimates"
+                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                title="견적 목록으로 돌아가기"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </Link>
               <select
                 value={estimate.estimateStatus}
                 onChange={(e) => updateField("estimateStatus", e.target.value as EstimateStatus)}
@@ -370,9 +395,33 @@ export default function EstimatePage() {
                 />
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
+              {rightPanelMode === "spending" && (
+                <>
+                  <div className="text-right border-r border-zinc-200 dark:border-zinc-800 pr-6">
+                    <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">지출결의 합계</p>
+                    <div className="flex items-center justify-end gap-1">
+                      <span className="text-xl font-bold text-blue-600 dark:text-blue-400 font-mono tracking-tight">
+                        {totalSpendingActual.toLocaleString()}
+                      </span>
+                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">원</span>
+                    </div>
+                  </div>
+                  <div className="text-right border-r border-zinc-200 dark:border-zinc-800 pr-6">
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">예상 수익 (수익률)</p>
+                    <div className="flex items-center justify-end gap-2">
+                      <span className={`text-xl font-bold font-mono tracking-tight ${margin < 0 ? 'text-red-500' : 'text-zinc-600 dark:text-zinc-300'}`}>
+                        {margin.toLocaleString()}
+                      </span>
+                      <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${margin < 0 ? 'bg-red-50 text-red-600' : 'bg-zinc-100 text-zinc-600'}`}>
+                        {marginPercent.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
               <div className="text-right">
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">총 견적금액</p>
+                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">총 견적금액</p>
                 <div className="flex items-center justify-end gap-1">
                   <input
                     type="number"
@@ -401,8 +450,8 @@ export default function EstimatePage() {
                     onClick={() => setRightPanelMode(rightPanelMode === "spending" ? "none" : "spending")}
                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                       rightPanelMode === "spending"
-                        ? "bg-emerald-600 text-white shadow-lg" 
-                        : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200"
+                        ? "bg-blue-600 text-white shadow-lg" 
+                        : "bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
                     }`}
                   >
                     지출결의서
@@ -517,9 +566,10 @@ export default function EstimatePage() {
       {/* 내역서 Section */}
       <div className={`mx-auto px-4 sm:px-6 py-8 transition-all duration-500 ${isSplitView ? "max-w-[98%]" : "max-w-[1600px]"}`}>
         {rightPanelMode === "spending" ? (
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-emerald-200 dark:border-emerald-900/30 overflow-hidden shadow-sm h-[800px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-blue-200 dark:border-blue-900/30 overflow-hidden shadow-sm h-[800px] animate-in fade-in slide-in-from-bottom-4 duration-500">
             <SpendingRequestManager
               lineItems={estimate.lineItems}
+              additionalLineItems={estimate.additionalLineItems}
               spendingRequests={estimate.spendingRequests}
               onAddSpendingRequest={addSpendingRequest}
               onUpdateSpendingRequest={updateSpendingRequest}
@@ -545,7 +595,7 @@ export default function EstimatePage() {
                   <LineItemTableCompact 
                     items={estimate.lineItems} 
                     spendingRequests={estimate.spendingRequests}
-                    onMapToSpendingRequest={undefined}
+                    onMapToAdditionalItem={rightPanelMode === "additional" ? handleMapLineItemToAdditional : undefined}
                     activeFilter={spendingFilter}
                     onFilterChange={setSpendingFilter}
                   />
@@ -556,6 +606,7 @@ export default function EstimatePage() {
                     onAddItem={addLineItem}
                     onDeleteItem={deleteLineItem}
                     spendingRequests={estimate.spendingRequests}
+                    onMapToAdditionalItem={rightPanelMode === "additional" ? handleMapLineItemToAdditional : undefined}
                     activeFilter={spendingFilter}
                     onFilterChange={setSpendingFilter}
                   />
@@ -589,11 +640,24 @@ export default function EstimatePage() {
           </div>
         )}
 
-        {/* Back link */}
-        <div className="mt-8 text-center">
+        {/* Bottom Action Section */}
+        <div className="mt-12 flex flex-col items-center gap-4 pb-20">
+          <button
+            onClick={() => {
+              // This would typically trigger a final save or API call
+              alert("견적서가 제출되었습니다.");
+            }}
+            className="w-full max-w-sm py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold transition-all shadow-xl shadow-indigo-600/20 active:scale-[0.98] flex items-center justify-center gap-3"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+            견적서 제출하기
+          </button>
+          
           <Link
             href="/estimates"
-            className="text-sm text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 font-medium"
+            className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium flex items-center gap-1 transition-colors"
           >
             &larr; 견적 목록으로 돌아가기
           </Link>

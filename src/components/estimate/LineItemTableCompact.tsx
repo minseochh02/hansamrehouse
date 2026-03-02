@@ -5,12 +5,14 @@ export function LineItemTableCompact({
   items,
   spendingRequests = [],
   onMapToSpendingRequest,
+  onMapToAdditionalItem,
   activeFilter,
   onFilterChange,
 }: { 
   items: EstimateLineItem[];
   spendingRequests?: SpendingRequestItem[];
   onMapToSpendingRequest?: (item: EstimateLineItem) => void;
+  onMapToAdditionalItem?: (item: EstimateLineItem) => void;
   activeFilter?: SpendingFilter;
   onFilterChange?: (filter: SpendingFilter) => void;
 }) {
@@ -59,7 +61,7 @@ export function LineItemTableCompact({
             <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-24">세부공정</th>
             <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-24">품목명</th>
             <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right w-32">금액</th>
-            {onMapToSpendingRequest && <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-10"></th>}
+            {(onMapToSpendingRequest || onMapToAdditionalItem) && <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-10"></th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -165,23 +167,38 @@ export function LineItemTableCompact({
                     <div className="mt-1 border-t border-zinc-100 dark:border-zinc-800 pt-1 flex justify-end gap-1 whitespace-nowrap">
                       <span className={totalActual > item.amount ? "text-red-500" : ""}>{item.amount.toLocaleString()}</span>
                       {totalActual > 0 && (
-                        <span className={`font-bold ${totalActual > item.amount ? "text-red-600" : "text-emerald-600"}`}>
+                        <span className={`font-bold ${totalActual > item.amount ? "text-red-600" : "text-blue-600"}`}>
                           - {totalActual.toLocaleString()}
                         </span>
                       )}
                     </div>
                   </td>
-                  {onMapToSpendingRequest && (
+                  {(onMapToSpendingRequest || onMapToAdditionalItem) && (
                     <td className="px-2 py-1.5 text-center">
-                      <button
-                        onClick={() => onMapToSpendingRequest(item)}
-                        className="p-1.5 rounded-md text-zinc-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
-                        title="지출결의서로 매핑"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                        </svg>
-                      </button>
+                      <div className="flex flex-col gap-1 items-center">
+                        {onMapToAdditionalItem && (
+                          <button
+                            onClick={() => onMapToAdditionalItem(item)}
+                            className="p-1.5 rounded-md text-zinc-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
+                            title="추가 견적서로 매핑"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        )}
+                        {onMapToSpendingRequest && (
+                          <button
+                            onClick={() => onMapToSpendingRequest(item)}
+                            className="p-1.5 rounded-md text-zinc-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                            title="지출결의서로 매핑"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

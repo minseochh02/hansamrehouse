@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { SpendingRequestItem, EstimateLineItem, SpendingFilter } from "@/types/estimate";
+import type { SpendingRequestItem, EstimateLineItem, SpendingFilter, AdditionalLineItem } from "@/types/estimate";
 import { SpendingRequestTable } from "./SpendingRequestTable";
 import { LineItemTableCompact } from "./LineItemTableCompact";
 import { SpendingRequestUnifiedTable } from "./SpendingRequestUnifiedTable";
@@ -7,6 +7,7 @@ import { SpendingRequestDrawer } from "./SpendingRequestDrawer";
 
 export function SpendingRequestManager({
   lineItems,
+  additionalLineItems = [],
   spendingRequests,
   onAddSpendingRequest,
   onUpdateSpendingRequest,
@@ -15,6 +16,7 @@ export function SpendingRequestManager({
   onFilterChange,
 }: {
   lineItems: EstimateLineItem[];
+  additionalLineItems?: AdditionalLineItem[];
   spendingRequests: SpendingRequestItem[];
   onAddSpendingRequest: (newItem: Omit<SpendingRequestItem, "id">) => void;
   onUpdateSpendingRequest: (id: string, field: keyof SpendingRequestItem, value: any) => void;
@@ -63,7 +65,6 @@ export function SpendingRequestManager({
       processName: lineItem.category,
       subProcessName: lineItem.subCategory,
       itemName: lineItem.name,
-      status: "최초",
       materialEstimateCost: matEst,
       materialActualCost: 0,
       laborEstimateCost: labEst,
@@ -95,7 +96,56 @@ export function SpendingRequestManager({
       memo: "",
       date: now,
       contactInfo: "",
-      paymentStatus: "대기",
+      paymentStatus: "임시저장",
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    setEditingItem(newItem as SpendingRequestItem);
+    setIsDrawerOpen(true);
+  };
+
+  const handleMapAdditionalItemToSpending = (additionalItem: AdditionalLineItem) => {
+    const now = new Date().toISOString().split('T')[0];
+    
+    const newItem: Omit<SpendingRequestItem, "id"> = {
+      lineItemId: additionalItem.id,
+      processName: "추가공사",
+      subProcessName: additionalItem.location,
+      itemName: additionalItem.name,
+      materialEstimateCost: additionalItem.additionalAmount,
+      materialActualCost: 0,
+      laborEstimateCost: 0,
+      laborActualCost: 0,
+      expenseEstimateCost: 0,
+      expenseActualCost: 0,
+      materialPreviouslySpent: 0,
+      laborPreviouslySpent: 0,
+      expensePreviouslySpent: 0,
+      totalEstimateCost: additionalItem.additionalAmount,
+      totalSpendingActual: 0,
+      evidenceType: "",
+      evidencePhotoUrl: "",
+      workStatusSheetUrl: "",
+      evidenceGuide: "",
+      isUrgentToday: false,
+      deadlineMemo: "",
+      purchaseLink: "",
+      deliveryType: "",
+      vendorName: "",
+      isExistingVendorAccount: false,
+      bankName: "",
+      accountHolder: "",
+      accountNumber: "",
+      amountBeforeTax: 0,
+      hasTaxDeduction: false,
+      taxDeductionAmount: 0,
+      finalDepositAmount: 0,
+      memo: "",
+      date: now,
+      contactInfo: "",
+      paymentStatus: "임시저장",
+      isAdditional: true,
       createdAt: now,
       updatedAt: now,
     };
@@ -114,7 +164,7 @@ export function SpendingRequestManager({
             title="2단 보기 (내역서 + 지출결의서)"
             className={`px-3 py-1.5 rounded-md transition-all ${
               viewMode === "split" 
-                ? "bg-white dark:bg-zinc-700 text-emerald-600 dark:text-emerald-400 shadow-sm" 
+                ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" 
                 : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
             }`}
           >
@@ -127,7 +177,7 @@ export function SpendingRequestManager({
             title="1단 보기 (통합 내역)"
             className={`px-3 py-1.5 rounded-md transition-all ${
               viewMode === "single" 
-                ? "bg-white dark:bg-zinc-700 text-emerald-600 dark:text-emerald-400 shadow-sm" 
+                ? "bg-white dark:bg-zinc-700 text-blue-600 dark:text-blue-400 shadow-sm" 
                 : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
             }`}
           >
@@ -141,7 +191,7 @@ export function SpendingRequestManager({
            {activeFilter.type !== 'none' && (
              <button
                onClick={() => onFilterChange({ type: 'none', value: '' })}
-               className="text-[10px] bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 px-2 py-1 rounded-full border border-emerald-100 dark:border-emerald-800 font-bold flex items-center gap-1"
+               className="text-[10px] bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded-full border border-blue-100 dark:border-blue-800 font-bold flex items-center gap-1"
              >
                필터: {activeFilter.value}
                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,11 +246,13 @@ export function SpendingRequestManager({
             <div className="flex-1 overflow-y-auto">
               <SpendingRequestUnifiedTable 
                 lineItems={lineItems}
+                additionalLineItems={additionalLineItems}
                 spendingRequests={spendingRequests}
                 onItemChange={onUpdateSpendingRequest}
                 onDeleteItem={onDeleteSpendingRequest}
                 onOpenDrawer={handleOpenDrawer}
                 onMapToSpendingRequest={handleMapLineItemToSpending}
+                onMapToAdditionalSpendingRequest={handleMapAdditionalItemToSpending}
                 activeFilter={activeFilter}
                 onFilterChange={onFilterChange}
               />
@@ -213,12 +265,12 @@ export function SpendingRequestManager({
       <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
         <button
           onClick={() => handleOpenDrawer(null)}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-all shadow-lg shadow-emerald-600/20 active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98]"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
           </svg>
-          새 지출결의서 작성
+          제출하기
         </button>
       </div>
 

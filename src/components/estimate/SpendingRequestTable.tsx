@@ -76,9 +76,8 @@ export function SpendingRequestTable({
               <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider group">
                 <div className="flex items-center">협력업체 <FilterIcon /></div>
               </th>
-              <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-20">상태</th>
               <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right">지출결의합계</th>
-              <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-20 text-center">결제</th>
+              <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-20 text-center">상태</th>
               <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-20 text-center">긴급</th>
               <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-12"></th>
             </tr>
@@ -96,13 +95,13 @@ export function SpendingRequestTable({
               filteredItems.map((item) => (
                 <tr 
                   key={item.id} 
-                  className="group hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer"
+                  className="group bg-blue-50/30 dark:bg-blue-900/10 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer border-l-2 border-blue-500 shadow-sm mb-1"
                   onClick={() => onOpenDrawer(item)}
                 >
                   <td 
                     className={`px-2 py-2 text-zinc-600 dark:text-zinc-400 cursor-help transition-colors ${
                       activeFilter?.type === 'itemName' && activeFilter?.value === item.itemName
-                        ? "bg-emerald-100 dark:bg-emerald-900/40"
+                        ? "bg-blue-100 dark:bg-blue-900/40"
                         : ""
                     }`}
                     onClick={(e) => {
@@ -113,12 +112,19 @@ export function SpendingRequestTable({
                     onMouseMove={(e) => setHoveredContent({ text: item.itemName, x: e.clientX, y: e.clientY })}
                     onMouseLeave={() => setHoveredContent(null)}
                   >
-                    <div className="truncate max-w-[200px]">{item.itemName}</div>
+                    <div className="flex items-center gap-1.5">
+                      {item.isAdditional && (
+                        <span className="shrink-0 text-[9px] bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400 px-1 py-0.5 rounded font-bold border border-purple-200 dark:border-purple-800">
+                          추가
+                        </span>
+                      )}
+                      <div className="truncate max-w-[200px] font-medium text-blue-900 dark:text-blue-100">{item.itemName}</div>
+                    </div>
                   </td>
                   <td 
                     className={`px-2 py-2 text-zinc-600 dark:text-zinc-100 font-medium cursor-help transition-colors ${
                       activeFilter?.type === 'vendorName' && activeFilter?.value === item.vendorName
-                        ? "bg-emerald-100 dark:bg-emerald-900/40"
+                        ? "bg-blue-100 dark:bg-blue-900/40"
                         : ""
                     }`}
                     onClick={(e) => {
@@ -133,25 +139,19 @@ export function SpendingRequestTable({
                   >
                     <div className="truncate max-w-[120px]">{item.vendorName || "-"}</div>
                   </td>
-                  <td className="px-2 py-2">
-                    <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      item.status === '최초' ? 'bg-blue-50 text-blue-600 border border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800' :
-                      item.status === '변경' ? 'bg-amber-50 text-amber-600 border border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800' :
-                      'bg-red-50 text-red-600 border border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
-                    }`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="px-2 py-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                  <td className="px-2 py-2 text-right font-mono font-bold text-blue-600 dark:text-blue-400">
                     {(item.totalSpendingActual || 0).toLocaleString()}
                   </td>
                   <td className="px-2 py-2 text-center">
-                    <span className={`text-[10px] font-bold ${
-                      item.paymentStatus === '완료' ? 'text-emerald-600' :
-                      item.paymentStatus === '반려' ? 'text-red-600' :
-                      'text-zinc-400'
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border transition-colors ${
+                      item.paymentStatus === '완료' ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/30 dark:border-blue-800' :
+                      item.paymentStatus === '반려' ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/30 dark:border-red-800' :
+                      item.paymentStatus === '임시저장' ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:border-amber-800' :
+                      'bg-zinc-50 text-zinc-400 border-zinc-100 dark:bg-zinc-800/50 dark:border-zinc-700'
                     }`}>
-                      {item.paymentStatus}
+                      {item.paymentStatus === '완료' ? '결제완료' :
+                       item.paymentStatus === '반려' ? '반려됨' : 
+                       item.paymentStatus === '임시저장' ? '임시저장' : '결제대기'}
                     </span>
                   </td>
                   <td className="px-2 py-2 text-center">
@@ -181,12 +181,12 @@ export function SpendingRequestTable({
             )}
           </tbody>
           <tfoot className="sticky bottom-0 z-10">
-            <tr className="border-t-2 border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800">
-              <td colSpan={3} className="px-2 py-4 text-right font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+            <tr className="border-t-2 border-zinc-300 dark:border-zinc-600 bg-blue-50/50 dark:bg-blue-900/20">
+              <td colSpan={3} className="px-2 py-4 text-right font-bold text-blue-900 dark:text-blue-100 uppercase tracking-wider">
                 지출 합계 (지출결의)
               </td>
-              <td className="px-2 py-4 text-right font-mono font-bold text-lg text-emerald-600 dark:text-emerald-400">
-                {totalActual.toLocaleString()} <span className="text-xs ml-1">원</span>
+              <td className="px-2 py-4 text-right font-mono font-bold text-lg text-blue-600 dark:text-blue-400">
+                {totalActual.toLocaleString()} <span className="text-xs ml-1 font-bold text-blue-500">원</span>
               </td>
               <td colSpan={3} />
             </tr>
