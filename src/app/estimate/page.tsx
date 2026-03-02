@@ -19,7 +19,7 @@ import { PaymentTimeline } from "@/components/estimate/PaymentTimeline";
 import { LineItemTable } from "@/components/estimate/LineItemTable";
 import { LineItemTableCompact } from "@/components/estimate/LineItemTableCompact";
 import { AdditionalItemTable } from "@/components/estimate/AdditionalItemTable";
-import { SpendingRequestTable } from "@/components/estimate/SpendingRequestTable";
+import { SpendingRequestManager } from "@/components/estimate/SpendingRequestManager";
 import { ChevronIcon } from "@/components/estimate/ChevronIcon";
 
 const MOCK_ESTIMATE: Estimate = {
@@ -516,90 +516,78 @@ export default function EstimatePage() {
 
       {/* 내역서 Section */}
       <div className={`mx-auto px-4 sm:px-6 py-8 transition-all duration-500 ${isSplitView ? "max-w-[98%]" : "max-w-[1600px]"}`}>
-        <div className={`grid gap-8 ${isSplitView ? "grid-cols-1 xl:grid-cols-[4fr_6fr]" : "grid-cols-1"}`}>
-          {/* Left Column: Regular Line Items */}
-          <div className={`bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm transition-all ${isSplitView ? "h-[800px] flex flex-col" : ""}`}>
-            <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/20 sticky top-0 z-10">
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
-                내역서
-              </h3>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                {estimate.lineItems.length}개 항목
-              </span>
-            </div>
-            <div className={`${isSplitView ? "overflow-y-auto flex-1" : ""}`}>
-              {isSplitView ? (
-                <LineItemTableCompact 
-                  items={estimate.lineItems} 
-                  spendingRequests={estimate.spendingRequests}
-                  onMapToSpendingRequest={rightPanelMode === "spending" ? handleMapLineItemToSpending : undefined}
-                  activeFilter={spendingFilter}
-                  onFilterChange={setSpendingFilter}
-                />
-              ) : (
-                <LineItemTable 
-                  items={estimate.lineItems} 
-                  onItemChange={updateLineItem}
-                  onAddItem={addLineItem}
-                  onDeleteItem={deleteLineItem}
-                  spendingRequests={estimate.spendingRequests}
-                  activeFilter={spendingFilter}
-                  onFilterChange={setSpendingFilter}
-                />
-              )}
-            </div>
+        {rightPanelMode === "spending" ? (
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-emerald-200 dark:border-emerald-900/30 overflow-hidden shadow-sm h-[800px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <SpendingRequestManager
+              lineItems={estimate.lineItems}
+              spendingRequests={estimate.spendingRequests}
+              onAddSpendingRequest={addSpendingRequest}
+              onUpdateSpendingRequest={updateSpendingRequest}
+              onDeleteSpendingRequest={deleteSpendingRequest}
+              activeFilter={spendingFilter}
+              onFilterChange={setSpendingFilter}
+            />
           </div>
-
-          {/* Right Column: Additional or Spending */}
-          {isSplitView && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-              {rightPanelMode === "additional" && (
-                <div className="bg-white dark:bg-zinc-900 rounded-xl border border-purple-200 dark:border-purple-900/30 overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-purple-100 dark:border-purple-900/30 flex items-center justify-between bg-purple-50/30 dark:bg-purple-900/10">
-                    <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100 uppercase tracking-wider">
-                      추가 공사 내역서
-                    </h3>
-                    <span className="text-xs text-purple-500 dark:text-purple-400">
-                      {estimate.additionalLineItems.length}개 항목
-                    </span>
-                  </div>
-                  <AdditionalItemTable 
-                    items={estimate.additionalLineItems}
-                    onItemChange={updateAdditionalItem}
-                    onAddItem={addAdditionalItem}
-                    onDeleteItem={deleteAdditionalItem}
-                  />
-                </div>
-              )}
-
-              {rightPanelMode === "spending" && (
-                <div className="bg-white dark:bg-zinc-900 rounded-xl border border-emerald-200 dark:border-emerald-900/30 overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-emerald-100 dark:border-emerald-900/30 flex items-center justify-between bg-emerald-50/30 dark:bg-emerald-900/10">
-                    <h3 className="text-sm font-semibold text-emerald-900 dark:text-emerald-100 uppercase tracking-wider">
-                      지출결의서 (RD 구매 요청)
-                    </h3>
-                    <span className="text-xs text-emerald-500 dark:text-emerald-400">
-                      {estimate.spendingRequests.length}개 항목
-                    </span>
-                  </div>
-                  <SpendingRequestTable 
-                    items={estimate.spendingRequests}
-                    lineItems={estimate.lineItems}
-                    onItemChange={updateSpendingRequest}
-                    onAddItem={addSpendingRequest}
-                    onDeleteItem={deleteSpendingRequest}
-                    isOpen={isSpendingDrawerOpen}
-                    editingItem={editingSpendingRequest}
-                    onOpenDrawer={handleOpenSpendingDrawer}
-                    onCloseDrawer={() => setIsSpendingDrawerOpen(false)}
+        ) : (
+          <div className={`grid gap-8 ${isSplitView ? "grid-cols-1 xl:grid-cols-[4fr_6fr]" : "grid-cols-1"}`}>
+            {/* Left Column: Regular Line Items */}
+            <div className={`bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm transition-all ${isSplitView ? "h-[800px] flex flex-col" : ""}`}>
+              <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/20 sticky top-0 z-10">
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+                  내역서
+                </h3>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {estimate.lineItems.length}개 항목
+                </span>
+              </div>
+              <div className={`${isSplitView ? "overflow-y-auto flex-1" : ""}`}>
+                {isSplitView ? (
+                  <LineItemTableCompact 
+                    items={estimate.lineItems} 
+                    spendingRequests={estimate.spendingRequests}
+                    onMapToSpendingRequest={undefined}
                     activeFilter={spendingFilter}
                     onFilterChange={setSpendingFilter}
                   />
-                </div>
-              )}
+                ) : (
+                  <LineItemTable 
+                    items={estimate.lineItems} 
+                    onItemChange={updateLineItem}
+                    onAddItem={addLineItem}
+                    onDeleteItem={deleteLineItem}
+                    spendingRequests={estimate.spendingRequests}
+                    activeFilter={spendingFilter}
+                    onFilterChange={setSpendingFilter}
+                  />
+                )}
+              </div>
             </div>
-          )}
-        </div>
+
+            {/* Right Column: Additional or Spending */}
+            {isSplitView && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                {rightPanelMode === "additional" && (
+                  <div className="bg-white dark:bg-zinc-900 rounded-xl border border-purple-200 dark:border-purple-900/30 overflow-hidden shadow-sm">
+                    <div className="px-6 py-4 border-b border-purple-100 dark:border-purple-900/30 flex items-center justify-between bg-purple-50/30 dark:bg-purple-900/10">
+                      <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100 uppercase tracking-wider">
+                        추가 공사 내역서
+                      </h3>
+                      <span className="text-xs text-purple-500 dark:text-purple-400">
+                        {estimate.additionalLineItems.length}개 항목
+                      </span>
+                    </div>
+                    <AdditionalItemTable 
+                      items={estimate.additionalLineItems}
+                      onItemChange={updateAdditionalItem}
+                      onAddItem={addAdditionalItem}
+                      onDeleteItem={deleteAdditionalItem}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Back link */}
         <div className="mt-8 text-center">

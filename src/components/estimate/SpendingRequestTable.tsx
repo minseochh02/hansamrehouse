@@ -10,14 +10,10 @@ const FilterIcon = () => (
 
 export function SpendingRequestTable({ 
   items,
-  lineItems = [],
   onItemChange,
   onAddItem,
   onDeleteItem,
-  isOpen,
-  editingItem,
   onOpenDrawer,
-  onCloseDrawer,
   activeFilter,
   onFilterChange,
 }: { 
@@ -34,31 +30,6 @@ export function SpendingRequestTable({
   onFilterChange?: (filter: SpendingFilter) => void;
 }) {
   const [hoveredContent, setHoveredContent] = useState<{ text: string; x: number; y: number } | null>(null);
-
-  const handleSave = (itemData: SpendingRequestItem | Omit<SpendingRequestItem, "id">) => {
-    const now = new Date().toISOString().split('T')[0];
-    const dataWithTimestamps = {
-      ...itemData,
-      updatedAt: now,
-    };
-
-    if ("id" in dataWithTimestamps) {
-      // Update existing item
-      Object.keys(dataWithTimestamps).forEach((key) => {
-        const field = key as keyof SpendingRequestItem;
-        if (field !== "id") {
-          onItemChange(dataWithTimestamps.id, field, dataWithTimestamps[field]);
-        }
-      });
-    } else {
-      // Add new item
-      onAddItem({
-        ...dataWithTimestamps,
-        createdAt: now,
-      });
-    }
-    onCloseDrawer();
-  };
 
   const filteredItems = items.filter((item) => {
     if (!activeFilter || activeFilter.type === 'none') return true;
@@ -222,15 +193,6 @@ export function SpendingRequestTable({
           </tfoot>
         </table>
       </div>
-
-      <SpendingRequestDrawer
-        item={editingItem}
-        isOpen={isOpen}
-        onClose={onCloseDrawer}
-        onSave={handleSave}
-        allSpendingRequests={items}
-        lineItems={lineItems}
-      />
     </div>
   );
 }
