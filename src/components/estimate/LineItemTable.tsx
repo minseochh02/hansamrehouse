@@ -1,7 +1,8 @@
-import { useState } from "react";
-import type { EstimateLineItem, SpendingRequestItem, SpendingFilter } from "@/types/estimate";
+import { useState, Fragment } from "react";
+import type { EstimateLineItem, SpendingRequestItem, SpendingFilter, AdditionalLineItem } from "@/types/estimate";
 
 const FilterIcon = () => (
+// ... existing FilterIcon ...
   <svg className="w-3.5 h-3.5 ml-1 text-zinc-400 group-hover:text-zinc-500 transition-colors cursor-pointer inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
   </svg>
@@ -13,6 +14,9 @@ export function LineItemTable({
   onAddItem,
   onDeleteItem,
   spendingRequests = [],
+  additionalLineItems = [],
+  onAdditionalItemChange,
+  onDeleteAdditionalItem,
   onMapToSpendingRequest,
   onMapToAdditionalItem,
   activeFilter,
@@ -23,6 +27,9 @@ export function LineItemTable({
   onAddItem: (newItem: Omit<EstimateLineItem, "id" | "amount">) => void;
   onDeleteItem: (id: string) => void;
   spendingRequests?: SpendingRequestItem[];
+  additionalLineItems?: AdditionalLineItem[];
+  onAdditionalItemChange?: (id: string, field: keyof AdditionalLineItem, value: any) => void;
+  onDeleteAdditionalItem?: (id: string) => void;
   onMapToSpendingRequest?: (item: EstimateLineItem) => void;
   onMapToAdditionalItem?: (item: EstimateLineItem) => void;
   activeFilter?: SpendingFilter;
@@ -281,10 +288,22 @@ export function LineItemTable({
             const catItems = items.filter((item) => item.category === cat);
             const subtotal = catItems.reduce((sum, item) => sum + item.amount, 0);
 
+            // Calculate total rows for category (including matched additional items)
+            const catTotalRows = catItems.reduce((acc, item) => {
+              const matchedAI = additionalLineItems.filter(ai => ai.name === item.name);
+              return acc + 1 + matchedAI.length;
+            }, 0);
+
             return catItems.map((item, idx) => {
               const subCatItems = catItems.filter((i) => i.subCategory === item.subCategory);
               const isFirstInSubCat = catItems.findIndex((i) => i.subCategory === item.subCategory) === idx;
               const subCatTotal = subCatItems.reduce((sum, i) => sum + i.amount, 0);
+
+              // Calculate total rows for subcategory
+              const subCatTotalRows = subCatItems.reduce((acc, i) => {
+                const matchedAI = additionalLineItems.filter(ai => ai.name === i.name);
+                return acc + 1 + matchedAI.length;
+              }, 0);
 
               const matchedRequests = spendingRequests.filter(
                 (r) => r.processName === item.category && 
@@ -297,195 +316,268 @@ export function LineItemTable({
               const actualExpense = matchedRequests.reduce((sum, r) => sum + (r.expenseActualCost || 0), 0);
               const totalActual = actualMaterial + actualLabor + actualExpense;
 
+              const matchedAI = additionalLineItems.filter(ai => ai.name === item.name);
+
               return (
-                <tr
-                  key={item.id}
-                  className={`border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${
-                    activeFilter?.type === 'vendorName' && matchedRequests.some(r => r.vendorName === activeFilter.value)
-                      ? "bg-emerald-50 dark:bg-emerald-900/20"
-                      : ""
-                  }`}
-                >
-                  <td className="px-2 py-1.5 text-zinc-400 font-mono text-xs">{item.id}</td>
-                  {idx === 0 ? (
-                    <td
-                      rowSpan={catItems.length}
-                      onClick={() => handleFilterClick('category', item.category)}
-                      className={`px-2 py-1.5 font-medium text-zinc-900 dark:text-zinc-100 align-top cursor-pointer transition-colors w-24 ${
-                        activeFilter?.type === 'category' && activeFilter?.value === item.category
-                          ? "bg-emerald-100 dark:bg-emerald-900/40"
-                          : "bg-zinc-50/50 dark:bg-zinc-800/30"
-                      }`}
-                    >
-                      <input
-                        type="text"
-                        value={item.category}
-                        title={item.category}
-                        onChange={(e) => onItemChange(item.id, "category", e.target.value)}
-                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 -ml-1 py-0.5 font-medium"
-                      />
-                      <div className="text-[10px] text-zinc-400 mt-1 font-normal leading-tight">
-                        공정 소계:<br />{subtotal.toLocaleString()}원
-                      </div>
-                    </td>
-                  ) : null}
-                  {isFirstInSubCat ? (
-                    <td
-                      rowSpan={subCatItems.length}
-                      onClick={() => handleFilterClick('subCategory', item.subCategory)}
-                      className={`px-2 py-1.5 align-top border-l border-zinc-100 dark:border-zinc-800 cursor-pointer transition-colors w-24 ${
-                        activeFilter?.type === 'subCategory' && activeFilter?.value === item.subCategory
-                          ? "bg-emerald-100 dark:bg-emerald-900/40"
-                          : "bg-zinc-50/20 dark:bg-zinc-800/10"
-                      }`}
-                    >
-                      <input
-                        type="text"
-                        value={item.subCategory}
-                        title={item.subCategory}
-                        onChange={(e) => onItemChange(item.id, "subCategory", e.target.value)}
-                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 -ml-1 py-0.5 text-zinc-600 dark:text-zinc-400"
-                      />
-                      <div className="text-[10px] text-zinc-400 mt-1 font-normal leading-tight">
-                        세부 소계:<br />{subCatTotal.toLocaleString()}원
-                      </div>
-                    </td>
-                  ) : null}
-                  <td 
-                    className={`px-2 py-1.5 cursor-pointer transition-colors ${
-                      activeFilter?.type === 'itemName' && activeFilter?.value === item.name
-                        ? "bg-emerald-100 dark:bg-emerald-900/40"
+                <Fragment key={item.id}>
+                  <tr
+                    className={`border-b border-zinc-100 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${
+                      activeFilter?.type === 'vendorName' && matchedRequests.some(r => r.vendorName === activeFilter.value)
+                        ? "bg-emerald-50 dark:bg-emerald-900/20"
                         : ""
                     }`}
-                    onClick={() => handleFilterClick('itemName', item.name)}
                   >
-                    <input
-                      type="text"
-                      value={item.name}
-                      onChange={(e) => onItemChange(item.id, "name", e.target.value)}
-                      onMouseEnter={(e) => setHoveredContent({ text: item.name, x: e.clientX, y: e.clientY })}
-                      onMouseMove={(e) => setHoveredContent({ text: item.name, x: e.clientX, y: e.clientY })}
-                      onMouseLeave={() => setHoveredContent(null)}
-                      className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 -ml-1 py-0.5 text-zinc-900 dark:text-zinc-100"
-                    />
-                  </td>
-                  <td className="px-2 py-1.5 text-center text-zinc-500 text-xs">
-                    {item.unit}
-                  </td>
-                  <td className="px-2 py-1.5 text-right font-mono">
-                    <input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => onItemChange(item.id, "quantity", Number(e.target.value))}
-                      className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 py-0.5 text-right text-zinc-900 dark:text-zinc-100"
-                    />
-                  </td>
-                  <td className="px-2 py-1.5 text-right font-mono">
-                    <div className="flex gap-1 group-hover:bg-zinc-100 dark:group-hover:bg-zinc-800 rounded transition-colors p-0.5">
-                      <input
-                        type="number"
-                        value={item.materialUnitPrice}
-                        onChange={(e) => onItemChange(item.id, "materialUnitPrice", Number(e.target.value))}
-                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 py-0.5 text-right text-xs text-zinc-900 dark:text-zinc-100"
-                        title="재료비"
-                        placeholder="재료"
-                      />
-                      <input
-                        type="number"
-                        value={item.laborUnitPrice}
-                        onChange={(e) => onItemChange(item.id, "laborUnitPrice", Number(e.target.value))}
-                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 py-0.5 text-right text-xs text-zinc-900 dark:text-zinc-100 border-l border-zinc-200 dark:border-zinc-700"
-                        title="노무비"
-                        placeholder="노무"
-                      />
-                      <input
-                        type="number"
-                        value={item.expenseUnitPrice}
-                        onChange={(e) => onItemChange(item.id, "expenseUnitPrice", Number(e.target.value))}
-                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 py-0.5 text-right text-xs text-zinc-900 dark:text-zinc-100 border-l border-zinc-200 dark:border-zinc-700"
-                        title="경비"
-                        placeholder="경비"
-                      />
-                    </div>
-                  </td>
-                  <td className="px-2 py-1.5 text-right font-mono font-medium text-zinc-900 dark:text-zinc-100">
-                    <div className="flex flex-col text-[10px] leading-tight">
-                      <div className="flex justify-end gap-2">
-                        <span className="text-zinc-400">{(item.materialUnitPrice * item.quantity).toLocaleString()}</span>
-                        {actualMaterial > 0 && <span className="text-emerald-600 dark:text-emerald-400 font-bold">- {actualMaterial.toLocaleString()}</span>}
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <span className="text-zinc-400">{(item.laborUnitPrice * item.quantity).toLocaleString()}</span>
-                        {actualLabor > 0 && <span className="text-emerald-600 dark:text-emerald-400 font-bold">- {actualLabor.toLocaleString()}</span>}
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <span className="text-zinc-400">{(item.expenseUnitPrice * item.quantity).toLocaleString()}</span>
-                        {actualExpense > 0 && <span className="text-emerald-600 dark:text-emerald-400 font-bold">- {actualExpense.toLocaleString()}</span>}
-                      </div>
-                    </div>
-                    <div className="mt-1 border-t border-zinc-100 dark:border-zinc-800 pt-1 flex justify-end gap-2">
-                      <span className={totalActual > item.amount ? "text-red-500" : ""}>{item.amount.toLocaleString()}</span>
-                      {totalActual > 0 && (
-                        <span className={`font-bold ${totalActual > item.amount ? "text-red-600" : "text-emerald-600 dark:text-emerald-400"}`}>
-                          - {totalActual.toLocaleString()}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-2 py-1.5 text-center">
-                    <button
-                      onClick={() => openNoteEditor(item.id, item.note)}
-                      onMouseEnter={(e) => item.note && setHoveredContent({ text: item.note, x: e.clientX, y: e.clientY })}
-                      onMouseMove={(e) => item.note && setHoveredContent({ text: item.note, x: e.clientX, y: e.clientY })}
-                      onMouseLeave={() => setHoveredContent(null)}
-                      className={`p-2 rounded-lg transition-all ${
-                        item.note 
-                          ? "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 shadow-sm" 
-                          : "text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                      }`}
-                      title={item.note || "비고 작성"}
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                  </td>
-                  <td className="px-2 py-1.5 text-center">
-                    <div className="flex items-center justify-center gap-1">
-                      {onMapToAdditionalItem && (
-                        <button
-                          onClick={() => onMapToAdditionalItem(item)}
-                          className="p-1.5 rounded-md text-zinc-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
-                          title="추가 견적서로 매핑"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      )}
-                      {onMapToSpendingRequest && (
-                        <button
-                          onClick={() => onMapToSpendingRequest(item)}
-                          className="p-1.5 rounded-md text-zinc-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
-                          title="지출결의서로 매핑"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      )}
-                      <button
-                        onClick={() => onDeleteItem(item.id)}
-                        className="p-1.5 rounded-md text-zinc-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
-                        title="삭제"
+                    <td className="px-2 py-1.5 text-zinc-400 font-mono text-xs">{item.id}</td>
+                    {idx === 0 ? (
+                      <td
+                        rowSpan={catTotalRows}
+                        onClick={() => handleFilterClick('category', item.category)}
+                        className={`px-2 py-1.5 font-medium text-zinc-900 dark:text-zinc-100 align-top cursor-pointer transition-colors w-24 ${
+                          activeFilter?.type === 'category' && activeFilter?.value === item.category
+                            ? "bg-emerald-100 dark:bg-emerald-900/40"
+                            : "bg-zinc-50/50 dark:bg-zinc-800/30"
+                        }`}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <input
+                          type="text"
+                          value={item.category}
+                          title={item.category}
+                          onChange={(e) => onItemChange(item.id, "category", e.target.value)}
+                          className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 -ml-1 py-0.5 font-medium"
+                        />
+                        <div className="text-[10px] text-zinc-400 mt-1 font-normal leading-tight">
+                          공정 소계:<br />{subtotal.toLocaleString()}원
+                        </div>
+                      </td>
+                    ) : null}
+                    {isFirstInSubCat ? (
+                      <td
+                        rowSpan={subCatTotalRows}
+                        onClick={() => handleFilterClick('subCategory', item.subCategory)}
+                        className={`px-2 py-1.5 align-top border-l border-zinc-100 dark:border-zinc-800 cursor-pointer transition-colors w-24 ${
+                          activeFilter?.type === 'subCategory' && activeFilter?.value === item.subCategory
+                            ? "bg-emerald-100 dark:bg-emerald-900/40"
+                            : "bg-zinc-50/20 dark:bg-zinc-800/10"
+                        }`}
+                      >
+                        <input
+                          type="text"
+                          value={item.subCategory}
+                          title={item.subCategory}
+                          onChange={(e) => onItemChange(item.id, "subCategory", e.target.value)}
+                          className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 -ml-1 py-0.5 text-zinc-600 dark:text-zinc-400"
+                        />
+                        <div className="text-[10px] text-zinc-400 mt-1 font-normal leading-tight">
+                          세부 소계:<br />{subCatTotal.toLocaleString()}원
+                        </div>
+                      </td>
+                    ) : null}
+                    <td 
+                      className={`px-2 py-1.5 cursor-pointer transition-colors ${
+                        activeFilter?.type === 'itemName' && activeFilter?.value === item.name
+                          ? "bg-emerald-100 dark:bg-emerald-900/40"
+                          : ""
+                      }`}
+                      onClick={() => handleFilterClick('itemName', item.name)}
+                    >
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => onItemChange(item.id, "name", e.target.value)}
+                        onMouseEnter={(e) => setHoveredContent({ text: item.name, x: e.clientX, y: e.clientY })}
+                        onMouseMove={(e) => setHoveredContent({ text: item.name, x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setHoveredContent(null)}
+                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 -ml-1 py-0.5 text-zinc-900 dark:text-zinc-100"
+                      />
+                    </td>
+                    <td className="px-2 py-1.5 text-center text-zinc-500 text-xs">
+                      {item.unit}
+                    </td>
+                    <td className="px-2 py-1.5 text-right font-mono">
+                      <input
+                        type="number"
+                        value={item.quantity}
+                        onChange={(e) => onItemChange(item.id, "quantity", Number(e.target.value))}
+                        className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 py-0.5 text-right text-zinc-900 dark:text-zinc-100"
+                      />
+                    </td>
+                    <td className="px-2 py-1.5 text-right font-mono">
+                      <div className="flex gap-1 group-hover:bg-zinc-100 dark:group-hover:bg-zinc-800 rounded transition-colors p-0.5">
+                        <input
+                          type="number"
+                          value={item.materialUnitPrice}
+                          onChange={(e) => onItemChange(item.id, "materialUnitPrice", Number(e.target.value))}
+                          className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 py-0.5 text-right text-xs text-zinc-900 dark:text-zinc-100"
+                          title="재료비"
+                          placeholder="재료"
+                        />
+                        <input
+                          type="number"
+                          value={item.laborUnitPrice}
+                          onChange={(e) => onItemChange(item.id, "laborUnitPrice", Number(e.target.value))}
+                          className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 py-0.5 text-right text-xs text-zinc-900 dark:text-zinc-100 border-l border-zinc-200 dark:border-zinc-700"
+                          title="노무비"
+                          placeholder="노무"
+                        />
+                        <input
+                          type="number"
+                          value={item.expenseUnitPrice}
+                          onChange={(e) => onItemChange(item.id, "expenseUnitPrice", Number(e.target.value))}
+                          className="w-full bg-transparent border-none focus:ring-1 focus:ring-indigo-500 rounded px-1 py-0.5 text-right text-xs text-zinc-900 dark:text-zinc-100 border-l border-zinc-200 dark:border-zinc-700"
+                          title="경비"
+                          placeholder="경비"
+                        />
+                      </div>
+                    </td>
+                    <td className="px-2 py-1.5 text-right font-mono font-medium text-zinc-900 dark:text-zinc-100">
+                      <div className="flex flex-col text-[10px] leading-tight">
+                        <div className="flex justify-end gap-2">
+                          <span className="text-zinc-400">{(item.materialUnitPrice * item.quantity).toLocaleString()}</span>
+                          {actualMaterial > 0 && <span className="text-emerald-600 dark:text-emerald-400 font-bold">- {actualMaterial.toLocaleString()}</span>}
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <span className="text-zinc-400">{(item.laborUnitPrice * item.quantity).toLocaleString()}</span>
+                          {actualLabor > 0 && <span className="text-emerald-600 dark:text-emerald-400 font-bold">- {actualLabor.toLocaleString()}</span>}
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <span className="text-zinc-400">{(item.expenseUnitPrice * item.quantity).toLocaleString()}</span>
+                          {actualExpense > 0 && <span className="text-emerald-600 dark:text-emerald-400 font-bold">- {actualExpense.toLocaleString()}</span>}
+                        </div>
+                      </div>
+                      <div className="mt-1 border-t border-zinc-100 dark:border-zinc-800 pt-1 flex justify-end gap-2">
+                        <span className={totalActual > item.amount ? "text-red-500" : ""}>{item.amount.toLocaleString()}</span>
+                        {totalActual > 0 && (
+                          <span className={`font-bold ${totalActual > item.amount ? "text-red-600" : "text-emerald-600 dark:text-emerald-400"}`}>
+                            - {totalActual.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      <button
+                        onClick={() => openNoteEditor(item.id, item.note)}
+                        onMouseEnter={(e) => item.note && setHoveredContent({ text: item.note, x: e.clientX, y: e.clientY })}
+                        onMouseMove={(e) => item.note && setHoveredContent({ text: item.note, x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setHoveredContent(null)}
+                        className={`p-2 rounded-lg transition-all ${
+                          item.note 
+                            ? "text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 shadow-sm" 
+                            : "text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                        }`}
+                        title={item.note || "비고 작성"}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {onMapToAdditionalItem && (
+                          <button
+                            onClick={() => onMapToAdditionalItem(item)}
+                            className="p-1.5 rounded-md text-zinc-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
+                            title="추가 견적서로 매핑"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        )}
+                        {onMapToSpendingRequest && (
+                          <button
+                            onClick={() => onMapToSpendingRequest(item)}
+                            className="p-1.5 rounded-md text-zinc-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                            title="지출결의서로 매핑"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onDeleteItem(item.id)}
+                          className="p-1.5 rounded-md text-zinc-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                          title="삭제"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {matchedAI.map(ai => (
+                    <tr key={ai.id} className="bg-purple-50/20 dark:bg-purple-900/10 border-b border-purple-100/50 dark:border-purple-800/30 text-purple-700 dark:text-purple-300 group">
+                      <td className="px-2 py-1 text-purple-400 font-mono text-[10px] text-center">추가</td>
+                      <td className="px-2 py-1">
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-3 h-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                          </svg>
+                          <span className="text-xs font-semibold">추가 견적</span>
+                        </div>
+                      </td>
+                      <td className="px-2 py-1" colSpan={2}>
+                        <div className="flex items-center justify-end gap-1 font-mono text-xs">
+                          <span className="text-purple-400/70 text-[10px]">({ai.requestDate})</span>
+                        </div>
+                      </td>
+                      <td className="px-2 py-1 text-right font-mono text-xs" colSpan={2}>
+                        <div className="flex gap-1 bg-white/50 dark:bg-zinc-800/50 border border-purple-200 dark:border-purple-700 rounded p-0.5 shadow-sm">
+                          <input
+                            type="number"
+                            placeholder="재료"
+                            value={ai.materialCost || ""}
+                            onChange={(e) => onAdditionalItemChange && onAdditionalItemChange(ai.id, "materialCost", Number(e.target.value))}
+                            className="w-full bg-transparent border-none focus:ring-0 px-1 py-0.5 text-right text-[10px] font-mono text-purple-700 dark:text-purple-300"
+                            title="추가 재료비"
+                          />
+                          <input
+                            type="number"
+                            placeholder="노무"
+                            value={ai.laborCost || ""}
+                            onChange={(e) => onAdditionalItemChange && onAdditionalItemChange(ai.id, "laborCost", Number(e.target.value))}
+                            className="w-full bg-transparent border-none focus:ring-0 px-1 py-0.5 text-right text-[10px] font-mono text-purple-700 dark:text-purple-300 border-l border-purple-100 dark:border-purple-700"
+                            title="추가 노무비"
+                          />
+                          <input
+                            type="number"
+                            placeholder="경비"
+                            value={ai.expense || ""}
+                            onChange={(e) => onAdditionalItemChange && onAdditionalItemChange(ai.id, "expense", Number(e.target.value))}
+                            className="w-full bg-transparent border-none focus:ring-0 px-1 py-0.5 text-right text-[10px] font-mono text-purple-700 dark:text-purple-300 border-l border-purple-100 dark:border-purple-700"
+                            title="추가 경비"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-2 py-1 text-right font-mono font-bold text-xs">
+                        <div className="flex flex-col items-end">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-normal text-purple-400/70">+</span>
+                            <span>{ai.additionalAmount.toLocaleString()}</span>
+                          </div>
+                          <div className="text-[9px] text-purple-400/50 font-normal">
+                            기존: {ai.originalAmount.toLocaleString()}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-2 py-1 text-center" colSpan={2}>
+                        {onDeleteAdditionalItem && (
+                          <button
+                            onClick={() => onDeleteAdditionalItem(ai.id)}
+                            className="p-1 rounded text-purple-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all opacity-0 group-hover:opacity-100"
+                            title="추가 견적 삭제"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
               );
             });
           })}

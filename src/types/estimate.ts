@@ -33,7 +33,10 @@ export interface AdditionalLineItem {
   requestDate: string;
   location: string;
   name: string;
-  additionalAmount: number;
+  materialCost: number; // 재료비
+  laborCost: number; // 노무비
+  expense: number; // 경비
+  additionalAmount: number; // 추가 금액 (재료비 + 노무비 + 경비)
   originalAmount: number;
   totalAmount: number;
 }

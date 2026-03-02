@@ -16,6 +16,9 @@ export function AdditionalItemTable({
     requestDate: new Date().toISOString().split('T')[0],
     location: "",
     name: "",
+    materialCost: 0,
+    laborCost: 0,
+    expense: 0,
     additionalAmount: 0,
     originalAmount: 0,
   });
@@ -27,10 +30,17 @@ export function AdditionalItemTable({
         requestDate: new Date().toISOString().split('T')[0],
         location: "",
         name: "",
+        materialCost: 0,
+        laborCost: 0,
+        expense: 0,
         additionalAmount: 0,
         originalAmount: 0,
       });
     }
+  };
+
+  const calculateAdditionalAmount = (item: any) => {
+    return Number(item.materialCost || 0) + Number(item.laborCost || 0) + Number(item.expense || 0);
   };
 
   return (
@@ -41,9 +51,12 @@ export function AdditionalItemTable({
             <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-32">요청일</th>
             <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-32">공간명</th>
             <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">품목</th>
-            <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right w-32">추가금액</th>
-            <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right w-32">기존금액</th>
-            <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right w-32">합계금액</th>
+            <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right w-24">재료비</th>
+            <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right w-24">노무비</th>
+            <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right w-24">경비</th>
+            <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right w-28">추가금액</th>
+            <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right w-28">기존금액</th>
+            <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-right w-28">합계금액</th>
             <th className="px-2 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider w-12"></th>
           </tr>
         </thead>
@@ -80,10 +93,43 @@ export function AdditionalItemTable({
               <input
                 type="number"
                 placeholder="0"
-                value={newItem.additionalAmount || ""}
-                onChange={(e) => setNewItem({ ...newItem, additionalAmount: Number(e.target.value) })}
+                value={newItem.materialCost || ""}
+                onChange={(e) => {
+                  const materialCost = Number(e.target.value);
+                  const updatedNewItem = { ...newItem, materialCost };
+                  setNewItem({ ...updatedNewItem, additionalAmount: calculateAdditionalAmount(updatedNewItem) });
+                }}
                 className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 text-sm text-right font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
               />
+            </td>
+            <td className="px-2 py-2">
+              <input
+                type="number"
+                placeholder="0"
+                value={newItem.laborCost || ""}
+                onChange={(e) => {
+                  const laborCost = Number(e.target.value);
+                  const updatedNewItem = { ...newItem, laborCost };
+                  setNewItem({ ...updatedNewItem, additionalAmount: calculateAdditionalAmount(updatedNewItem) });
+                }}
+                className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 text-sm text-right font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+              />
+            </td>
+            <td className="px-2 py-2">
+              <input
+                type="number"
+                placeholder="0"
+                value={newItem.expense || ""}
+                onChange={(e) => {
+                  const expense = Number(e.target.value);
+                  const updatedNewItem = { ...newItem, expense };
+                  setNewItem({ ...updatedNewItem, additionalAmount: calculateAdditionalAmount(updatedNewItem) });
+                }}
+                className="w-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded px-2 py-1 text-sm text-right font-mono focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+              />
+            </td>
+            <td className="px-2 py-2 text-right font-mono font-medium text-purple-600 dark:text-purple-400">
+              {newItem.additionalAmount.toLocaleString()}
             </td>
             <td className="px-2 py-2">
               <input
@@ -138,10 +184,29 @@ export function AdditionalItemTable({
               <td className="px-2 py-1.5 text-right font-mono">
                 <input
                   type="number"
-                  value={item.additionalAmount}
-                  onChange={(e) => onItemChange(item.id, "additionalAmount", Number(e.target.value))}
+                  value={item.materialCost}
+                  onChange={(e) => onItemChange(item.id, "materialCost", Number(e.target.value))}
                   className="w-full bg-transparent border-none focus:ring-1 focus:ring-purple-500 rounded px-1 py-0.5 text-right text-zinc-900 dark:text-zinc-100"
                 />
+              </td>
+              <td className="px-2 py-1.5 text-right font-mono">
+                <input
+                  type="number"
+                  value={item.laborCost}
+                  onChange={(e) => onItemChange(item.id, "laborCost", Number(e.target.value))}
+                  className="w-full bg-transparent border-none focus:ring-1 focus:ring-purple-500 rounded px-1 py-0.5 text-right text-zinc-900 dark:text-zinc-100"
+                />
+              </td>
+              <td className="px-2 py-1.5 text-right font-mono">
+                <input
+                  type="number"
+                  value={item.expense}
+                  onChange={(e) => onItemChange(item.id, "expense", Number(e.target.value))}
+                  className="w-full bg-transparent border-none focus:ring-1 focus:ring-purple-500 rounded px-1 py-0.5 text-right text-zinc-900 dark:text-zinc-100"
+                />
+              </td>
+              <td className="px-2 py-1.5 text-right font-mono text-zinc-900 dark:text-zinc-100">
+                {item.additionalAmount.toLocaleString()}
               </td>
               <td className="px-2 py-1.5 text-right font-mono text-zinc-500 dark:text-zinc-400">
                 <input
@@ -171,6 +236,15 @@ export function AdditionalItemTable({
           <tr className="border-t-2 border-zinc-300 dark:border-zinc-600 bg-zinc-50/50 dark:bg-zinc-800/30">
             <td colSpan={3} className="px-2 py-2 text-right font-semibold text-zinc-900 dark:text-zinc-100">
               추가 합계
+            </td>
+            <td className="px-2 py-2 text-right font-bold text-zinc-600 dark:text-zinc-400 font-mono">
+              {items.reduce((sum, item) => sum + (item.materialCost || 0), 0).toLocaleString()}
+            </td>
+            <td className="px-2 py-2 text-right font-bold text-zinc-600 dark:text-zinc-400 font-mono">
+              {items.reduce((sum, item) => sum + (item.laborCost || 0), 0).toLocaleString()}
+            </td>
+            <td className="px-2 py-2 text-right font-bold text-zinc-600 dark:text-zinc-400 font-mono">
+              {items.reduce((sum, item) => sum + (item.expense || 0), 0).toLocaleString()}
             </td>
             <td className="px-2 py-2 text-right font-bold text-purple-600 dark:text-purple-400 font-mono text-base">
               {items.reduce((sum, item) => sum + item.additionalAmount, 0).toLocaleString()}

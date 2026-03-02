@@ -1,9 +1,10 @@
-import { useState } from "react";
-import type { EstimateLineItem, SpendingRequestItem, SpendingFilter } from "@/types/estimate";
+import { useState, Fragment } from "react";
+import type { EstimateLineItem, SpendingRequestItem, SpendingFilter, AdditionalLineItem } from "@/types/estimate";
 
 export function LineItemTableCompact({ 
   items,
   spendingRequests = [],
+  additionalLineItems = [],
   onMapToSpendingRequest,
   onMapToAdditionalItem,
   activeFilter,
@@ -11,6 +12,7 @@ export function LineItemTableCompact({
 }: { 
   items: EstimateLineItem[];
   spendingRequests?: SpendingRequestItem[];
+  additionalLineItems?: AdditionalLineItem[];
   onMapToSpendingRequest?: (item: EstimateLineItem) => void;
   onMapToAdditionalItem?: (item: EstimateLineItem) => void;
   activeFilter?: SpendingFilter;
@@ -68,9 +70,19 @@ export function LineItemTableCompact({
           {categories.map((cat) => {
             const catItems = items.filter((item) => item.category === cat);
 
+            const catTotalRows = catItems.reduce((acc, item) => {
+              const matchedAI = additionalLineItems.filter(ai => ai.name === item.name);
+              return acc + 1 + matchedAI.length;
+            }, 0);
+
             return catItems.map((item, idx) => {
               const subCatItems = catItems.filter((i) => i.subCategory === item.subCategory);
               const isFirstInSubCat = catItems.findIndex((i) => i.subCategory === item.subCategory) === idx;
+
+              const subCatTotalRows = subCatItems.reduce((acc, i) => {
+                const matchedAI = additionalLineItems.filter(ai => ai.name === i.name);
+                return acc + 1 + matchedAI.length;
+              }, 0);
 
               const matchedRequests = spendingRequests.filter(
                 (r) => r.processName === item.category && 
@@ -83,125 +95,155 @@ export function LineItemTableCompact({
               const actualExpense = matchedRequests.reduce((sum, r) => sum + (r.expenseActualCost || 0), 0);
               const totalActual = actualMaterial + actualLabor + actualExpense;
 
+              const matchedAI = additionalLineItems.filter(ai => ai.name === item.name);
+
               return (
-                <tr
-                  key={item.id}
-                  className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border-b border-zinc-50 dark:border-zinc-900 ${
-                    activeFilter?.type === 'vendorName' && matchedRequests.some(r => r.vendorName === activeFilter.value)
-                      ? "bg-emerald-50 dark:bg-emerald-900/20"
-                      : ""
-                  }`}
-                >
-                  {idx === 0 ? (
-                    <td
-                      rowSpan={catItems.length}
-                      onClick={() => handleFilterClick('category', cat)}
-                      className={`px-2 py-1.5 font-medium text-zinc-900 dark:text-zinc-100 align-top cursor-pointer transition-colors w-24 ${
-                        activeFilter?.type === 'category' && activeFilter?.value === cat
-                          ? "bg-emerald-100 dark:bg-emerald-900/40"
-                          : "bg-zinc-50/50 dark:bg-zinc-800/30"
-                      }`}
-                    >
-                      <div 
-                        className="text-xs truncate"
-                        onMouseEnter={(e) => setHoveredContent({ text: cat, x: e.clientX, y: e.clientY })}
-                        onMouseMove={(e) => setHoveredContent({ text: cat, x: e.clientX, y: e.clientY })}
-                        onMouseLeave={() => setHoveredContent(null)}
-                      >
-                        {cat}
-                      </div>
-                    </td>
-                  ) : null}
-                  {isFirstInSubCat ? (
-                    <td
-                      rowSpan={subCatItems.length}
-                      onClick={() => handleFilterClick('subCategory', item.subCategory)}
-                      className={`px-2 py-1.5 align-top border-l border-zinc-100 dark:border-zinc-800 cursor-pointer transition-colors w-24 ${
-                        activeFilter?.type === 'subCategory' && activeFilter?.value === item.subCategory
-                          ? "bg-emerald-100 dark:bg-emerald-900/40"
-                          : "bg-zinc-50/20 dark:bg-zinc-800/10"
-                      }`}
-                    >
-                      <div 
-                        className="text-xs truncate text-zinc-600 dark:text-zinc-400"
-                        onMouseEnter={(e) => setHoveredContent({ text: item.subCategory, x: e.clientX, y: e.clientY })}
-                        onMouseMove={(e) => setHoveredContent({ text: item.subCategory, x: e.clientX, y: e.clientY })}
-                        onMouseLeave={() => setHoveredContent(null)}
-                      >
-                        {item.subCategory}
-                      </div>
-                    </td>
-                  ) : null}
-                  <td 
-                    className={`px-2 py-1.5 max-w-[100px] cursor-pointer transition-colors ${
-                      activeFilter?.type === 'itemName' && activeFilter?.value === item.name
-                        ? "bg-emerald-100 dark:bg-emerald-900/40"
+                <Fragment key={item.id}>
+                  <tr
+                    className={`hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border-b border-zinc-50 dark:border-zinc-900 ${
+                      activeFilter?.type === 'vendorName' && matchedRequests.some(r => r.vendorName === activeFilter.value)
+                        ? "bg-emerald-50 dark:bg-emerald-900/20"
                         : ""
                     }`}
-                    onClick={() => handleFilterClick('itemName', item.name)}
                   >
-                    <div 
-                      className="text-xs truncate text-zinc-900 dark:text-zinc-100"
-                      onMouseEnter={(e) => setHoveredContent({ text: item.name, x: e.clientX, y: e.clientY })}
-                      onMouseMove={(e) => setHoveredContent({ text: item.name, x: e.clientX, y: e.clientY })}
-                      onMouseLeave={() => setHoveredContent(null)}
+                    {idx === 0 ? (
+                      <td
+                        rowSpan={catTotalRows}
+                        onClick={() => handleFilterClick('category', cat)}
+                        className={`px-2 py-1.5 font-medium text-zinc-900 dark:text-zinc-100 align-top cursor-pointer transition-colors w-24 ${
+                          activeFilter?.type === 'category' && activeFilter?.value === cat
+                            ? "bg-emerald-100 dark:bg-emerald-900/40"
+                            : "bg-zinc-50/50 dark:bg-zinc-800/30"
+                        }`}
+                      >
+                        <div 
+                          className="text-xs truncate"
+                          onMouseEnter={(e) => setHoveredContent({ text: cat, x: e.clientX, y: e.clientY })}
+                          onMouseMove={(e) => setHoveredContent({ text: cat, x: e.clientX, y: e.clientY })}
+                          onMouseLeave={() => setHoveredContent(null)}
+                        >
+                          {cat}
+                        </div>
+                      </td>
+                    ) : null}
+                    {isFirstInSubCat ? (
+                      <td
+                        rowSpan={subCatTotalRows}
+                        onClick={() => handleFilterClick('subCategory', item.subCategory)}
+                        className={`px-2 py-1.5 align-top border-l border-zinc-100 dark:border-zinc-800 cursor-pointer transition-colors w-24 ${
+                          activeFilter?.type === 'subCategory' && activeFilter?.value === item.subCategory
+                            ? "bg-emerald-100 dark:bg-emerald-900/40"
+                            : "bg-zinc-50/20 dark:bg-zinc-800/10"
+                        }`}
+                      >
+                        <div 
+                          className="text-xs truncate text-zinc-600 dark:text-zinc-400"
+                          onMouseEnter={(e) => setHoveredContent({ text: item.subCategory, x: e.clientX, y: e.clientY })}
+                          onMouseMove={(e) => setHoveredContent({ text: item.subCategory, x: e.clientX, y: e.clientY })}
+                          onMouseLeave={() => setHoveredContent(null)}
+                        >
+                          {item.subCategory}
+                        </div>
+                      </td>
+                    ) : null}
+                    <td 
+                      className={`px-2 py-1.5 max-w-[100px] cursor-pointer transition-colors ${
+                        activeFilter?.type === 'itemName' && activeFilter?.value === item.name
+                          ? "bg-emerald-100 dark:bg-emerald-900/40"
+                          : ""
+                      }`}
+                      onClick={() => handleFilterClick('itemName', item.name)}
                     >
-                      {item.name}
-                    </div>
-                  </td>
-                  <td className="px-2 py-1.5 text-right font-mono font-medium text-zinc-900 dark:text-zinc-100 text-xs leading-tight whitespace-nowrap">
-                    <div className="flex flex-col text-[9px] leading-tight">
-                      <div className="flex justify-end gap-1 whitespace-nowrap">
-                        <span className="text-zinc-400">{(item.materialUnitPrice * item.quantity).toLocaleString()}</span>
-                        {actualMaterial > 0 && <span className="text-emerald-600 font-bold">- {actualMaterial.toLocaleString()}</span>}
+                      <div 
+                        className="text-xs truncate text-zinc-900 dark:text-zinc-100"
+                        onMouseEnter={(e) => setHoveredContent({ text: item.name, x: e.clientX, y: e.clientY })}
+                        onMouseMove={(e) => setHoveredContent({ text: item.name, x: e.clientX, y: e.clientY })}
+                        onMouseLeave={() => setHoveredContent(null)}
+                      >
+                        {item.name}
                       </div>
-                      <div className="flex justify-end gap-1 whitespace-nowrap">
-                        <span className="text-zinc-400">{(item.laborUnitPrice * item.quantity).toLocaleString()}</span>
-                        {actualLabor > 0 && <span className="text-emerald-600 font-bold">- {actualLabor.toLocaleString()}</span>}
+                    </td>
+                    <td className="px-2 py-1.5 text-right font-mono font-medium text-zinc-900 dark:text-zinc-100 text-xs leading-tight whitespace-nowrap">
+                      <div className="flex flex-col text-[9px] leading-tight">
+                        <div className="flex justify-end gap-1 whitespace-nowrap">
+                          <span className="text-zinc-400">{(item.materialUnitPrice * item.quantity).toLocaleString()}</span>
+                          {actualMaterial > 0 && <span className="text-emerald-600 font-bold">- {actualMaterial.toLocaleString()}</span>}
+                        </div>
+                        <div className="flex justify-end gap-1 whitespace-nowrap">
+                          <span className="text-zinc-400">{(item.laborUnitPrice * item.quantity).toLocaleString()}</span>
+                          {actualLabor > 0 && <span className="text-emerald-600 font-bold">- {actualLabor.toLocaleString()}</span>}
+                        </div>
+                        <div className="flex justify-end gap-1 whitespace-nowrap">
+                          <span className="text-zinc-400">{(item.expenseUnitPrice * item.quantity).toLocaleString()}</span>
+                          {actualExpense > 0 && <span className="text-emerald-600 font-bold">- {actualExpense.toLocaleString()}</span>}
+                        </div>
                       </div>
-                      <div className="flex justify-end gap-1 whitespace-nowrap">
-                        <span className="text-zinc-400">{(item.expenseUnitPrice * item.quantity).toLocaleString()}</span>
-                        {actualExpense > 0 && <span className="text-emerald-600 font-bold">- {actualExpense.toLocaleString()}</span>}
-                      </div>
-                    </div>
-                    <div className="mt-1 border-t border-zinc-100 dark:border-zinc-800 pt-1 flex justify-end gap-1 whitespace-nowrap">
-                      <span className={totalActual > item.amount ? "text-red-500" : ""}>{item.amount.toLocaleString()}</span>
-                      {totalActual > 0 && (
-                        <span className={`font-bold ${totalActual > item.amount ? "text-red-600" : "text-blue-600"}`}>
-                          - {totalActual.toLocaleString()}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  {(onMapToSpendingRequest || onMapToAdditionalItem) && (
-                    <td className="px-2 py-1.5 text-center">
-                      <div className="flex flex-col gap-1 items-center">
-                        {onMapToAdditionalItem && (
-                          <button
-                            onClick={() => onMapToAdditionalItem(item)}
-                            className="p-1.5 rounded-md text-zinc-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
-                            title="추가 견적서로 매핑"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                            </svg>
-                          </button>
-                        )}
-                        {onMapToSpendingRequest && (
-                          <button
-                            onClick={() => onMapToSpendingRequest(item)}
-                            className="p-1.5 rounded-md text-zinc-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
-                            title="지출결의서로 매핑"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                            </svg>
-                          </button>
+                      <div className="mt-1 border-t border-zinc-100 dark:border-zinc-800 pt-1 flex justify-end gap-1 whitespace-nowrap">
+                        <span className={totalActual > item.amount ? "text-red-500" : ""}>{item.amount.toLocaleString()}</span>
+                        {totalActual > 0 && (
+                          <span className={`font-bold ${totalActual > item.amount ? "text-red-600" : "text-blue-600"}`}>
+                            - {totalActual.toLocaleString()}
+                          </span>
                         )}
                       </div>
                     </td>
-                  )}
-                </tr>
+                    {(onMapToSpendingRequest || onMapToAdditionalItem) && (
+                      <td className="px-2 py-1.5 text-center">
+                        <div className="flex flex-col gap-1 items-center">
+                          {onMapToAdditionalItem && (
+                            <button
+                              onClick={() => onMapToAdditionalItem(item)}
+                              className="p-1.5 rounded-md text-zinc-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
+                              title="추가 견적서로 매핑"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          )}
+                          {onMapToSpendingRequest && (
+                            <button
+                              onClick={() => onMapToSpendingRequest(item)}
+                              className="p-1.5 rounded-md text-zinc-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                              title="지출결의서로 매핑"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                  {matchedAI.map(ai => (
+                    <tr key={ai.id} className="bg-purple-50/20 dark:bg-purple-900/10 border-b border-purple-100/50 dark:border-purple-800/30 text-purple-700 dark:text-purple-300 text-[10px]">
+                      <td className="px-2 py-1">
+                        <div className="flex items-center gap-1.5">
+                          <svg className="w-3 h-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                          </svg>
+                          <span className="font-semibold">추가 견적</span>
+                          <span className="text-[8px] text-purple-400/70">({ai.requestDate})</span>
+                        </div>
+                      </td>
+                      <td className="px-2 py-1" colSpan={2}>
+                        <div className="flex flex-col items-end text-[8px] text-purple-400/70 leading-tight">
+                          {ai.materialCost !== 0 && <span>재료: {ai.materialCost.toLocaleString()}</span>}
+                          {ai.laborCost !== 0 && <span>노무: {ai.laborCost.toLocaleString()}</span>}
+                          {ai.expense !== 0 && <span>경비: {ai.expense.toLocaleString()}</span>}
+                        </div>
+                      </td>
+                      <td className="px-2 py-1 text-right font-mono">
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-[8px] text-purple-400/70">기존: {ai.originalAmount.toLocaleString()}</span>
+                          <span className="font-bold">+{ai.additionalAmount.toLocaleString()}</span>
+                        </div>
+                      </td>
+                      {(onMapToSpendingRequest || onMapToAdditionalItem) && <td className="px-2 py-1" />}
+                    </tr>
+                  ))}
+                </Fragment>
               );
             });
           })}

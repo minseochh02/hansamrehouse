@@ -91,14 +91,22 @@ export function SpendingRequestDrawer({
   const taxDeductionAmount = hasTaxDeduction ? Math.round(amountBeforeTax * 0.033) : 0;
   const finalDepositAmount = amountBeforeTax - taxDeductionAmount;
 
-  // Calculate previously spent (기실행) based on other requests with same lineItemId
+  // Calculate previously spent (기실행) based on other requests with same item name
   const otherRequests = allSpendingRequests.filter(req => 
-    req.lineItemId === formData.lineItemId && req.id !== item?.id
+    req.itemName === formData.itemName && req.id !== item?.id
   );
 
-  const materialPreviouslySpent = otherRequests.reduce((sum, req) => sum + (req.materialActualCost || 0), 0);
-  const laborPreviouslySpent = otherRequests.reduce((sum, req) => sum + (req.laborActualCost || 0), 0);
-  const expensePreviouslySpent = otherRequests.reduce((sum, req) => sum + (req.expenseActualCost || 0), 0);
+  // For new items from mapping, we trust the adjusted values passed in (which will be 0)
+  // For existing items being edited, we calculate based on other requests
+  const materialPreviouslySpent = item 
+    ? otherRequests.reduce((sum, req) => sum + (req.materialActualCost || 0), 0)
+    : (formData.materialPreviouslySpent || 0);
+  const laborPreviouslySpent = item 
+    ? otherRequests.reduce((sum, req) => sum + (req.laborActualCost || 0), 0)
+    : (formData.laborPreviouslySpent || 0);
+  const expensePreviouslySpent = item 
+    ? otherRequests.reduce((sum, req) => sum + (req.expenseActualCost || 0), 0)
+    : (formData.expensePreviouslySpent || 0);
 
   const handleChange = (field: keyof SpendingRequestItem, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

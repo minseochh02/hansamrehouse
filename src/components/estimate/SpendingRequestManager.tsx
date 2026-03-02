@@ -50,15 +50,22 @@ export function SpendingRequestManager({
   const handleMapLineItemToSpending = (lineItem: EstimateLineItem) => {
     const now = new Date().toISOString().split('T')[0];
     
-    // Calculate previously spent amounts for this line item
-    const otherRequests = spendingRequests.filter(req => req.lineItemId === lineItem.id);
-    const matPrev = otherRequests.reduce((sum, req) => sum + (req.materialActualCost || 0), 0);
-    const labPrev = otherRequests.reduce((sum, req) => sum + (req.laborActualCost || 0), 0);
-    const expPrev = otherRequests.reduce((sum, req) => sum + (req.expenseActualCost || 0), 0);
+    // Calculate total previous spending for this item name
+    const relatedRequests = spendingRequests.filter(req => req.itemName === lineItem.name);
+    const matSpent = relatedRequests.reduce((sum, req) => sum + (req.materialActualCost || 0), 0);
+    const labSpent = relatedRequests.reduce((sum, req) => sum + (req.laborActualCost || 0), 0);
+    const expSpent = relatedRequests.reduce((sum, req) => sum + (req.expenseActualCost || 0), 0);
 
-    const matEst = lineItem.materialUnitPrice * lineItem.quantity;
-    const labEst = lineItem.laborUnitPrice * lineItem.quantity;
-    const expEst = lineItem.expenseUnitPrice * lineItem.quantity;
+    // Calculate total additions for this item name
+    const matchedAdditions = (additionalLineItems || []).filter(ai => ai.name === lineItem.name);
+    const matAdditions = matchedAdditions.reduce((sum, ai) => sum + (ai.materialCost || 0), 0);
+    const labAdditions = matchedAdditions.reduce((sum, ai) => sum + (ai.laborCost || 0), 0);
+    const expAdditions = matchedAdditions.reduce((sum, ai) => sum + (ai.expense || 0), 0);
+
+    // Formula: 견적가 = 기존 견적서 - 기존지출서 + 추가 견적서
+    const matEst = (lineItem.materialUnitPrice * lineItem.quantity) - matSpent + matAdditions;
+    const labEst = (lineItem.laborUnitPrice * lineItem.quantity) - labSpent + labAdditions;
+    const expEst = (lineItem.expenseUnitPrice * lineItem.quantity) - expSpent + expAdditions;
 
     const newItem: Omit<SpendingRequestItem, "id"> = {
       lineItemId: lineItem.id,
@@ -71,10 +78,10 @@ export function SpendingRequestManager({
       laborActualCost: 0,
       expenseEstimateCost: expEst,
       expenseActualCost: 0,
-      materialPreviouslySpent: matPrev,
-      laborPreviouslySpent: labPrev,
-      expensePreviouslySpent: expPrev,
-      totalEstimateCost: lineItem.amount,
+      materialPreviouslySpent: 0, // Reset to 0 since estimate is already adjusted
+      laborPreviouslySpent: 0,
+      expensePreviouslySpent: 0,
+      totalEstimateCost: matEst + labEst + expEst,
       totalSpendingActual: 0,
       evidenceType: "",
       evidencePhotoUrl: "",
@@ -108,21 +115,41 @@ export function SpendingRequestManager({
   const handleMapAdditionalItemToSpending = (additionalItem: AdditionalLineItem) => {
     const now = new Date().toISOString().split('T')[0];
     
+    // Find original item if it exists to get base costs
+    const originalItem = lineItems.find(li => li.name === additionalItem.name);
+
+    // Calculate total previous spending for this item name
+    const relatedRequests = spendingRequests.filter(req => req.itemName === additionalItem.name);
+    const matSpent = relatedRequests.reduce((sum, req) => sum + (req.materialActualCost || 0), 0);
+    const labSpent = relatedRequests.reduce((sum, req) => sum + (req.laborActualCost || 0), 0);
+    const expSpent = relatedRequests.reduce((sum, req) => sum + (req.expenseActualCost || 0), 0);
+
+    // Calculate total additions for this item name
+    const matchedAdditions = (additionalLineItems || []).filter(ai => ai.name === additionalItem.name);
+    const matAdditions = matchedAdditions.reduce((sum, ai) => sum + (ai.materialCost || 0), 0);
+    const labAdditions = matchedAdditions.reduce((sum, ai) => sum + (ai.laborCost || 0), 0);
+    const expAdditions = matchedAdditions.reduce((sum, ai) => sum + (ai.expense || 0), 0);
+
+    // Formula: 견적가 = 기존 견적서 - 기존지출서 + 추가 견적서
+    const matEst = (originalItem ? (originalItem.materialUnitPrice * originalItem.quantity) : 0) - matSpent + matAdditions;
+    const labEst = (originalItem ? (originalItem.laborUnitPrice * originalItem.quantity) : 0) - labSpent + labAdditions;
+    const expEst = (originalItem ? (originalItem.expenseUnitPrice * originalItem.quantity) : 0) - expSpent + expAdditions;
+
     const newItem: Omit<SpendingRequestItem, "id"> = {
       lineItemId: additionalItem.id,
       processName: "추가공사",
       subProcessName: additionalItem.location,
       itemName: additionalItem.name,
-      materialEstimateCost: additionalItem.additionalAmount,
+      materialEstimateCost: matEst,
       materialActualCost: 0,
-      laborEstimateCost: 0,
+      laborEstimateCost: labEst,
       laborActualCost: 0,
-      expenseEstimateCost: 0,
+      expenseEstimateCost: expEst,
       expenseActualCost: 0,
       materialPreviouslySpent: 0,
       laborPreviouslySpent: 0,
       expensePreviouslySpent: 0,
-      totalEstimateCost: additionalItem.additionalAmount,
+      totalEstimateCost: matEst + labEst + expEst,
       totalSpendingActual: 0,
       evidenceType: "",
       evidencePhotoUrl: "",
@@ -214,6 +241,7 @@ export function SpendingRequestManager({
                 <LineItemTableCompact 
                   items={lineItems}
                   spendingRequests={spendingRequests}
+                  additionalLineItems={additionalLineItems}
                   onMapToSpendingRequest={handleMapLineItemToSpending}
                   activeFilter={activeFilter}
                   onFilterChange={onFilterChange}

@@ -16,10 +16,8 @@ import { StatusBadge } from "@/components/estimate/StatusBadge";
 import { SectionCard } from "@/components/estimate/SectionCard";
 import { Field } from "@/components/estimate/Field";
 import { PaymentTimeline } from "@/components/estimate/PaymentTimeline";
-import { LineItemTable } from "@/components/estimate/LineItemTable";
-import { LineItemTableCompact } from "@/components/estimate/LineItemTableCompact";
-import { AdditionalItemTable } from "@/components/estimate/AdditionalItemTable";
-import { SpendingRequestManager } from "@/components/estimate/SpendingRequestManager";
+import { SpendingRequestUnifiedTable } from "@/components/estimate/SpendingRequestUnifiedTable";
+import { SpendingRequestDrawer } from "@/components/estimate/SpendingRequestDrawer";
 import { ChevronIcon } from "@/components/estimate/ChevronIcon";
 
 const MOCK_ESTIMATE: Estimate = {
@@ -61,7 +59,6 @@ const MOCK_ESTIMATE: Estimate = {
 
 export default function EstimatePage() {
   const [overviewOpen, setOverviewOpen] = useState(true);
-  const [rightPanelMode, setRightPanelMode] = useState<"none" | "additional" | "spending">("none");
   const [estimate, setEstimate] = useState<Estimate>(MOCK_ESTIMATE);
   const [spendingFilter, setSpendingFilter] = useState<SpendingFilter>({ type: "none", value: "" });
 
@@ -72,21 +69,27 @@ export default function EstimatePage() {
   const handleOpenSpendingDrawer = (item: SpendingRequestItem | null = null) => {
     setEditingSpendingRequest(item);
     setIsSpendingDrawerOpen(true);
-    setRightPanelMode("spending"); // Ensure spending panel is open
   };
 
   const handleMapLineItemToSpending = (lineItem: EstimateLineItem) => {
     const now = new Date().toISOString().split('T')[0];
     
-    // Calculate previously spent amounts for this line item
-    const otherRequests = estimate.spendingRequests.filter(req => req.lineItemId === lineItem.id);
-    const matPrev = otherRequests.reduce((sum, req) => sum + (req.materialActualCost || 0), 0);
-    const labPrev = otherRequests.reduce((sum, req) => sum + (req.laborActualCost || 0), 0);
-    const expPrev = otherRequests.reduce((sum, req) => sum + (req.expenseActualCost || 0), 0);
+    // Calculate total previous spending for this item name
+    const relatedRequests = estimate.spendingRequests.filter(req => req.itemName === lineItem.name);
+    const matSpent = relatedRequests.reduce((sum, req) => sum + (req.materialActualCost || 0), 0);
+    const labSpent = relatedRequests.reduce((sum, req) => sum + (req.laborActualCost || 0), 0);
+    const expSpent = relatedRequests.reduce((sum, req) => sum + (req.expenseActualCost || 0), 0);
 
-    const matEst = lineItem.materialUnitPrice * lineItem.quantity;
-    const labEst = lineItem.laborUnitPrice * lineItem.quantity;
-    const expEst = lineItem.expenseUnitPrice * lineItem.quantity;
+    // Calculate total additions for this item name
+    const matchedAdditions = (estimate.additionalLineItems || []).filter(ai => ai.name === lineItem.name);
+    const matAdditions = matchedAdditions.reduce((sum, ai) => sum + (ai.materialCost || 0), 0);
+    const labAdditions = matchedAdditions.reduce((sum, ai) => sum + (ai.laborCost || 0), 0);
+    const expAdditions = matchedAdditions.reduce((sum, ai) => sum + (ai.expense || 0), 0);
+
+    // Formula: 견적가 = 기존 견적서 - 기존지출서 + 추가 견적서
+    const matEst = (lineItem.materialUnitPrice * lineItem.quantity) - matSpent + matAdditions;
+    const labEst = (lineItem.laborUnitPrice * lineItem.quantity) - labSpent + labAdditions;
+    const expEst = (lineItem.expenseUnitPrice * lineItem.quantity) - expSpent + expAdditions;
 
     const newItem: Omit<SpendingRequestItem, "id"> = {
       lineItemId: lineItem.id,
@@ -99,10 +102,10 @@ export default function EstimatePage() {
       laborActualCost: 0,
       expenseEstimateCost: expEst,
       expenseActualCost: 0,
-      materialPreviouslySpent: matPrev,
-      laborPreviouslySpent: labPrev,
-      expensePreviouslySpent: expPrev,
-      totalEstimateCost: lineItem.amount,
+      materialPreviouslySpent: 0,
+      laborPreviouslySpent: 0,
+      expensePreviouslySpent: 0,
+      totalEstimateCost: matEst + labEst + expEst,
       totalSpendingActual: 0,
       evidenceType: "",
       evidencePhotoUrl: "",
@@ -128,25 +131,71 @@ export default function EstimatePage() {
       createdAt: now,
       updatedAt: now,
     };
-    setEditingSpendingRequest(newItem as SpendingRequestItem); // Temporary cast, id will be added on save
+    setEditingSpendingRequest(newItem as SpendingRequestItem);
     setIsSpendingDrawerOpen(true);
-    setRightPanelMode("spending");
   };
 
-  const handleMapLineItemToAdditional = (lineItem: EstimateLineItem) => {
+  const handleMapAdditionalItemToSpending = (additionalItem: AdditionalLineItem) => {
     const now = new Date().toISOString().split('T')[0];
-    const newItem: Omit<AdditionalLineItem, "id" | "totalAmount"> = {
-      requestDate: now,
-      location: lineItem.subCategory || lineItem.category,
-      name: lineItem.name,
-      additionalAmount: 0,
-      originalAmount: lineItem.amount,
-    };
-    addAdditionalItem(newItem);
-    setRightPanelMode("additional");
-  };
+    
+    // Find original item if it exists to get base costs
+    const originalItem = estimate.lineItems.find(li => li.name === additionalItem.name);
 
-  const isSplitView = rightPanelMode !== "none";
+    // Calculate total previous spending for this item name
+    const relatedRequests = estimate.spendingRequests.filter(req => req.itemName === additionalItem.name);
+    const matSpent = relatedRequests.reduce((sum, req) => sum + (req.materialActualCost || 0), 0);
+    const labSpent = relatedRequests.reduce((sum, req) => sum + (req.laborActualCost || 0), 0);
+    const expSpent = relatedRequests.reduce((sum, req) => sum + (req.expenseActualCost || 0), 0);
+
+    // Formula: 견적가 = 기존 견적서 - 기존지출서 + 추가 견적서
+    const matEst = (originalItem ? (originalItem.materialUnitPrice * originalItem.quantity) : 0) - matSpent + (additionalItem.materialCost || 0);
+    const labEst = (originalItem ? (originalItem.laborUnitPrice * originalItem.quantity) : 0) - labSpent + (additionalItem.laborCost || 0);
+    const expEst = (originalItem ? (originalItem.expenseUnitPrice * originalItem.quantity) : 0) - expSpent + (additionalItem.expense || 0);
+
+    const newItem: Omit<SpendingRequestItem, "id"> = {
+      lineItemId: additionalItem.id,
+      processName: "추가공사",
+      subProcessName: additionalItem.location,
+      itemName: additionalItem.name,
+      materialEstimateCost: matEst,
+      materialActualCost: 0,
+      laborEstimateCost: labEst,
+      laborActualCost: 0,
+      expenseEstimateCost: expEst,
+      expenseActualCost: 0,
+      materialPreviouslySpent: 0,
+      laborPreviouslySpent: 0,
+      expensePreviouslySpent: 0,
+      totalEstimateCost: matEst + labEst + expEst,
+      totalSpendingActual: 0,
+      evidenceType: "",
+      evidencePhotoUrl: "",
+      workStatusSheetUrl: "",
+      evidenceGuide: "",
+      isUrgentToday: false,
+      deadlineMemo: "",
+      purchaseLink: "",
+      deliveryType: "",
+      vendorName: "",
+      isExistingVendorAccount: false,
+      bankName: "",
+      accountHolder: "",
+      accountNumber: "",
+      amountBeforeTax: 0,
+      hasTaxDeduction: false,
+      taxDeductionAmount: 0,
+      finalDepositAmount: 0,
+      memo: "",
+      date: now,
+      contactInfo: "",
+      paymentStatus: "임시저장",
+      isAdditional: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    setEditingSpendingRequest(newItem as SpendingRequestItem);
+    setIsSpendingDrawerOpen(true);
+  };
 
   const totalSpendingActual = estimate.spendingRequests.reduce((sum, req) => sum + (req.totalSpendingActual || 0), 0);
   const totalAdditionalProfit = estimate.additionalLineItems.reduce((sum, item) => sum + (item.additionalAmount || 0), 0);
@@ -154,18 +203,6 @@ export default function EstimatePage() {
   
   const margin = totalContractAmount - totalSpendingActual;
   const marginPercent = totalContractAmount > 0 ? (margin / totalContractAmount) * 100 : 0;
-
-  // Automatically close right panels if status changes and they are no longer allowed
-  useEffect(() => {
-    if (rightPanelMode === "additional") {
-      const allowed = (["공사중", "공사완료", "추가공사중", "추가공사완료"] as EstimateStatus[]).includes(estimate.estimateStatus);
-      if (!allowed) setRightPanelMode("none");
-    }
-    if (rightPanelMode === "spending") {
-      const allowed = (["견적중", "계약완료", "공사중", "추가공사중"] as EstimateStatus[]).includes(estimate.estimateStatus);
-      if (!allowed) setRightPanelMode("none");
-    }
-  }, [estimate.estimateStatus, rightPanelMode]);
 
   const updateField = (field: keyof Estimate, value: any) => {
     setEstimate((prev) => {
@@ -302,8 +339,11 @@ export default function EstimatePage() {
       const newAdditionalItems = prev.additionalLineItems.map((item) => {
         if (item.id === id) {
           const updatedItem = { ...item, [field]: value };
-          if (field === "additionalAmount" || field === "originalAmount") {
-            updatedItem.totalAmount = Number(updatedItem.additionalAmount) + Number(updatedItem.originalAmount);
+          if (["materialCost", "laborCost", "expense", "originalAmount"].includes(field as string)) {
+            updatedItem.additionalAmount = Number(updatedItem.materialCost || 0) + 
+                                          Number(updatedItem.laborCost || 0) + 
+                                          Number(updatedItem.expense || 0);
+            updatedItem.totalAmount = Number(updatedItem.additionalAmount) + Number(updatedItem.originalAmount || 0);
           }
           return updatedItem;
         }
@@ -316,8 +356,11 @@ export default function EstimatePage() {
   const addAdditionalItem = (newItem: Omit<AdditionalLineItem, "id" | "totalAmount">) => {
     setEstimate((prev) => {
       const id = String(prev.additionalLineItems.length > 0 ? Math.max(...prev.additionalLineItems.map(i => Number(i.id))) + 1 : 1);
-      const totalAmount = Number(newItem.additionalAmount) + Number(newItem.originalAmount);
-      const updatedItem = { ...newItem, id, totalAmount };
+      const additionalAmount = Number(newItem.materialCost || 0) + 
+                              Number(newItem.laborCost || 0) + 
+                              Number(newItem.expense || 0);
+      const totalAmount = additionalAmount + Number(newItem.originalAmount || 0);
+      const updatedItem = { ...newItem, id, additionalAmount, totalAmount };
       return { ...prev, additionalLineItems: [...prev.additionalLineItems, updatedItem] };
     });
   };
@@ -399,30 +442,26 @@ export default function EstimatePage() {
               </div>
             </div>
             <div className="flex items-center gap-6">
-              {rightPanelMode === "spending" && (
-                <>
-                  <div className="text-right border-r border-zinc-200 dark:border-zinc-800 pr-6">
-                    <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">지출결의 합계</p>
-                    <div className="flex items-center justify-end gap-1">
-                      <span className="text-xl font-bold text-blue-600 dark:text-blue-400 font-mono tracking-tight">
-                        {totalSpendingActual.toLocaleString()}
-                      </span>
-                      <span className="text-sm font-bold text-blue-600 dark:text-blue-400">원</span>
-                    </div>
-                  </div>
-                  <div className="text-right border-r border-zinc-200 dark:border-zinc-800 pr-6">
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">예상 수익 (수익률)</p>
-                    <div className="flex items-center justify-end gap-2">
-                      <span className={`text-xl font-bold font-mono tracking-tight ${margin < 0 ? 'text-red-500' : 'text-zinc-600 dark:text-zinc-300'}`}>
-                        {margin.toLocaleString()}
-                      </span>
-                      <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${margin < 0 ? 'bg-red-50 text-red-600' : 'bg-zinc-100 text-zinc-600'}`}>
-                        {marginPercent.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                </>
-              )}
+              <div className="text-right border-r border-zinc-200 dark:border-zinc-800 pr-6">
+                <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">지출결의 합계</p>
+                <div className="flex items-center justify-end gap-1">
+                  <span className="text-xl font-bold text-blue-600 dark:text-blue-400 font-mono tracking-tight">
+                    {totalSpendingActual.toLocaleString()}
+                  </span>
+                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">원</span>
+                </div>
+              </div>
+              <div className="text-right border-r border-zinc-200 dark:border-zinc-800 pr-6">
+                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">예상 수익 (수익률)</p>
+                <div className="flex items-center justify-end gap-2">
+                  <span className={`text-xl font-bold font-mono tracking-tight ${margin < 0 ? 'text-red-500' : 'text-zinc-600 dark:text-zinc-300'}`}>
+                    {margin.toLocaleString()}
+                  </span>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${margin < 0 ? 'bg-red-50 text-red-600' : 'bg-zinc-100 text-zinc-600'}`}>
+                    {marginPercent.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
               <div className="text-right">
                 <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">총 견적금액</p>
                 <div className="flex items-center justify-end gap-1">
@@ -433,30 +472,6 @@ export default function EstimatePage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {(["공사중", "공사완료", "추가공사중", "추가공사완료"] as EstimateStatus[]).includes(estimate.estimateStatus) && (
-                  <button
-                    onClick={() => setRightPanelMode(rightPanelMode === "additional" ? "none" : "additional")}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      rightPanelMode === "additional"
-                        ? "bg-purple-600 text-white shadow-lg" 
-                        : "bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-200"
-                    }`}
-                  >
-                    추가 견적
-                  </button>
-                )}
-                {(["견적중", "계약완료", "공사중", "추가공사중"] as EstimateStatus[]).includes(estimate.estimateStatus) && (
-                  <button
-                    onClick={() => setRightPanelMode(rightPanelMode === "spending" ? "none" : "spending")}
-                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                      rightPanelMode === "spending"
-                        ? "bg-blue-600 text-white shadow-lg" 
-                        : "bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200"
-                    }`}
-                  >
-                    지출결의서
-                  </button>
-                )}
                 <button
                   onClick={() => setOverviewOpen((v) => !v)}
                   className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
@@ -563,82 +578,81 @@ export default function EstimatePage() {
         </div>
       </div>
 
-      {/* 내역서 Section */}
-      <div className={`mx-auto px-4 sm:px-6 py-8 transition-all duration-500 ${isSplitView ? "max-w-[98%]" : "max-w-[1600px]"}`}>
-        {rightPanelMode === "spending" ? (
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-blue-200 dark:border-blue-900/30 overflow-hidden shadow-sm h-[800px] animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <SpendingRequestManager
+      {/* 통합 관리 Section */}
+      <div className="mx-auto px-4 sm:px-6 py-8 max-w-[1600px]">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-lg h-[900px] flex flex-col">
+          <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/20">
+            <div className="flex items-center gap-3">
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider flex items-center gap-2">
+                <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                견적 및 지출 통합 관리
+              </h3>
+              {spendingFilter.type !== 'none' && (
+                <button
+                  onClick={() => setSpendingFilter({ type: 'none', value: '' })}
+                  className="text-[10px] bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-1 rounded-full border border-indigo-100 dark:border-indigo-800 font-bold flex items-center gap-1"
+                >
+                  필터 해제
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-4 text-xs">
+              <span className="flex items-center gap-1.5 text-zinc-500">
+                <span className="w-2 h-2 rounded-full bg-zinc-400"></span> 기본 견적
+              </span>
+              <span className="flex items-center gap-1.5 text-purple-500">
+                <span className="w-2 h-2 rounded-full bg-purple-500"></span> 추가 견적
+              </span>
+              <span className="flex items-center gap-1.5 text-blue-500">
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span> 지출결의
+              </span>
+            </div>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <SpendingRequestUnifiedTable
               lineItems={estimate.lineItems}
               additionalLineItems={estimate.additionalLineItems}
               spendingRequests={estimate.spendingRequests}
-              onAddSpendingRequest={addSpendingRequest}
-              onUpdateSpendingRequest={updateSpendingRequest}
-              onDeleteSpendingRequest={deleteSpendingRequest}
+              onItemChange={updateSpendingRequest}
+              onDeleteItem={deleteSpendingRequest}
+              onLineItemChange={updateLineItem}
+              onAddLineItem={addLineItem}
+              onDeleteLineItem={deleteLineItem}
+              onAdditionalItemChange={updateAdditionalItem}
+              onAddAdditionalItem={addAdditionalItem}
+              onDeleteAdditionalItem={deleteAdditionalItem}
+              onOpenDrawer={handleOpenSpendingDrawer}
+              onMapToSpendingRequest={handleMapLineItemToSpending}
+              onMapToAdditionalSpendingRequest={handleMapAdditionalItemToSpending}
               activeFilter={spendingFilter}
               onFilterChange={setSpendingFilter}
             />
           </div>
-        ) : (
-          <div className={`grid gap-8 ${isSplitView ? "grid-cols-1 xl:grid-cols-[4fr_6fr]" : "grid-cols-1"}`}>
-            {/* Left Column: Regular Line Items */}
-            <div className={`bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm transition-all ${isSplitView ? "h-[800px] flex flex-col" : ""}`}>
-              <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/20 sticky top-0 z-10">
-                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
-                  내역서
-                </h3>
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {estimate.lineItems.length}개 항목
-                </span>
-              </div>
-              <div className={`${isSplitView ? "overflow-y-auto flex-1" : ""}`}>
-                {isSplitView ? (
-                  <LineItemTableCompact 
-                    items={estimate.lineItems} 
-                    spendingRequests={estimate.spendingRequests}
-                    onMapToAdditionalItem={rightPanelMode === "additional" ? handleMapLineItemToAdditional : undefined}
-                    activeFilter={spendingFilter}
-                    onFilterChange={setSpendingFilter}
-                  />
-                ) : (
-                  <LineItemTable 
-                    items={estimate.lineItems} 
-                    onItemChange={updateLineItem}
-                    onAddItem={addLineItem}
-                    onDeleteItem={deleteLineItem}
-                    spendingRequests={estimate.spendingRequests}
-                    onMapToAdditionalItem={rightPanelMode === "additional" ? handleMapLineItemToAdditional : undefined}
-                    activeFilter={spendingFilter}
-                    onFilterChange={setSpendingFilter}
-                  />
-                )}
-              </div>
-            </div>
+        </div>
 
-            {/* Right Column: Additional or Spending */}
-            {isSplitView && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                {rightPanelMode === "additional" && (
-                  <div className="bg-white dark:bg-zinc-900 rounded-xl border border-purple-200 dark:border-purple-900/30 overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-purple-100 dark:border-purple-900/30 flex items-center justify-between bg-purple-50/30 dark:bg-purple-900/10">
-                      <h3 className="text-sm font-semibold text-purple-900 dark:text-purple-100 uppercase tracking-wider">
-                        추가 공사 내역서
-                      </h3>
-                      <span className="text-xs text-purple-500 dark:text-purple-400">
-                        {estimate.additionalLineItems.length}개 항목
-                      </span>
-                    </div>
-                    <AdditionalItemTable 
-                      items={estimate.additionalLineItems}
-                      onItemChange={updateAdditionalItem}
-                      onAddItem={addAdditionalItem}
-                      onDeleteItem={deleteAdditionalItem}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Spending Request Drawer */}
+        <SpendingRequestDrawer
+          item={editingSpendingRequest}
+          isOpen={isSpendingDrawerOpen}
+          onClose={() => setIsSpendingDrawerOpen(false)}
+          onSave={(itemData) => {
+            if ("id" in itemData) {
+              Object.keys(itemData).forEach((key) => {
+                const field = key as keyof SpendingRequestItem;
+                if (field !== "id") {
+                  updateSpendingRequest(itemData.id, field, itemData[field]);
+                }
+              });
+            } else {
+              addSpendingRequest(itemData);
+            }
+            setIsSpendingDrawerOpen(false);
+          }}
+          allSpendingRequests={estimate.spendingRequests}
+          lineItems={estimate.lineItems}
+        />
 
         {/* Bottom Action Section */}
         <div className="mt-12 flex flex-col items-center gap-4 pb-20">
