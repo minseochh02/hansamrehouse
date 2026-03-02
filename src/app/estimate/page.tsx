@@ -149,8 +149,11 @@ export default function EstimatePage() {
   const isSplitView = rightPanelMode !== "none";
 
   const totalSpendingActual = estimate.spendingRequests.reduce((sum, req) => sum + (req.totalSpendingActual || 0), 0);
-  const margin = estimate.totalAmount - totalSpendingActual;
-  const marginPercent = estimate.totalAmount > 0 ? (margin / estimate.totalAmount) * 100 : 0;
+  const totalAdditionalProfit = estimate.additionalLineItems.reduce((sum, item) => sum + (item.additionalAmount || 0), 0);
+  const totalContractAmount = estimate.totalAmount + totalAdditionalProfit;
+  
+  const margin = totalContractAmount - totalSpendingActual;
+  const marginPercent = totalContractAmount > 0 ? (margin / totalContractAmount) * 100 : 0;
 
   // Automatically close right panels if status changes and they are no longer allowed
   useEffect(() => {
@@ -423,12 +426,9 @@ export default function EstimatePage() {
               <div className="text-right">
                 <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">총 견적금액</p>
                 <div className="flex items-center justify-end gap-1">
-                  <input
-                    type="number"
-                    value={estimate.totalAmount}
-                    onChange={(e) => updateField("totalAmount", Number(e.target.value))}
-                    className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-mono tracking-tight bg-transparent border-none text-right focus:ring-2 focus:ring-indigo-500 rounded px-1 w-40"
-                  />
+                  <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-mono tracking-tight text-right px-1">
+                    {totalContractAmount.toLocaleString()}
+                  </div>
                   <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">원</span>
                 </div>
               </div>
