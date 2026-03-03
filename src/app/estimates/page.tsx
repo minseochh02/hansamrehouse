@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 import { STATUS_STYLES } from "@/components/estimate/constants";
 import { StatusBadge } from "@/components/estimate/StatusBadge";
 import type { Estimate, EstimateStatus } from "@/types/estimate";
@@ -44,9 +45,55 @@ const MOCK_ESTIMATES: Partial<Estimate>[] = [
 ];
 
 export default function EstimatesPage() {
+  const [estimates, setEstimates] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredEstimates = MOCK_ESTIMATES.filter(
+  useEffect(() => {
+    fetchEstimates();
+  }, []);
+
+  const fetchEstimates = async () => {
+    try {
+      setIsLoading(true);
+      const response = await apiFetch("/api/estimates");
+      if (response.ok) {
+        const data = await response.json();
+        setEstimates(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch estimates:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!confirm("정말로 이 견적을 삭제하시겠습니까? 관련 데이터가 모두 삭제됩니다.")) {
+      return;
+    }
+
+    try {
+      const response = await apiFetch(`/api/estimates/${id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        alert("성공적으로 삭제되었습니다.");
+        setEstimates((prev) => prev.filter((est) => est.id !== id));
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "삭제 실패");
+      }
+    } catch (error: any) {
+      console.error("Failed to delete estimate:", error);
+      alert(`삭제 중 오류가 발생했습니다: ${error.message}`);
+    }
+  };
+
+  const filteredEstimates = estimates.filter(
     (est) =>
       est.customerName?.includes(searchTerm) ||
       est.shortAddress?.includes(searchTerm) ||
@@ -116,15 +163,26 @@ export default function EstimatesPage() {
           {filteredEstimates.map((est) => (
             <Link
               key={est.estimateCode}
-              href={`/estimate?id=${est.estimateCode}`}
+              href={`/estimate?id=${est.id}`}
               className="group bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 flex flex-col justify-between"
             >
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
-                  <StatusBadge status={est.estimateStatus as EstimateStatus} />
-                  <span className="text-xs font-mono text-zinc-400">
-                    {est.estimateCode}
-                  </span>
+                  <StatusBadge status={est.status as EstimateStatus} />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-zinc-400">
+                      {est.estimateCode}
+                    </span>
+                    <button
+                      onClick={(e) => handleDelete(e, est.id)}
+                      className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-zinc-400 hover:text-red-500 transition-colors"
+                      title="견적 삭제"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 
                 <div>

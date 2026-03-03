@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const API_KEY = '027901a3-c678-4fa0-8d3c-2532d961c001';
+const API_KEY = '35813a42-b8aa-4d0a-a3eb-e16833652f2c';
 const API_URL = 'http://localhost:8080/user-data/tools/call';
 
 async function callUserDataTool(toolName: string, args: any) {
@@ -51,7 +51,7 @@ function parseCSV(content: string) {
 }
 
 async function main() {
-  const tablesToDelete = ['MasterItems', 'MasterSubCategories', 'MasterCategories'];
+  const tablesToDelete = ['masteritems', 'mastersubcategories', 'mastercategories'];
   console.log('Cleaning up existing tables...');
   for (const table of tablesToDelete) {
     try {
@@ -64,10 +64,10 @@ async function main() {
 
   console.log('Recreating tables with name-based schema...');
 
-  // Create MasterCategories
+  // Create mastercategories
   await callUserDataTool('user_data_create_table', {
     displayName: 'MasterCategories',
-    tableName: 'MasterCategories',
+    tableName: 'mastercategories',
     schema: [
       { name: 'name', type: 'TEXT', notNull: true },
       { name: 'displayOrder', type: 'INTEGER', defaultValue: 0 },
@@ -76,12 +76,12 @@ async function main() {
     uniqueKeyColumns: ['name'],
     duplicateAction: 'update'
   });
-  console.log('Created MasterCategories.');
+  console.log('Created mastercategories.');
 
-  // Create MasterSubCategories
+  // Create mastersubcategories
   await callUserDataTool('user_data_create_table', {
     displayName: 'MasterSubCategories',
-    tableName: 'MasterSubCategories',
+    tableName: 'mastersubcategories',
     schema: [
       { name: 'categoryId', type: 'TEXT', notNull: true },
       { name: 'name', type: 'TEXT', notNull: true },
@@ -91,12 +91,12 @@ async function main() {
     uniqueKeyColumns: ['name', 'categoryId'],
     duplicateAction: 'update'
   });
-  console.log('Created MasterSubCategories.');
+  console.log('Created mastersubcategories.');
 
-  // Create MasterItems
+  // Create masteritems
   await callUserDataTool('user_data_create_table', {
     displayName: 'MasterItems',
-    tableName: 'MasterItems',
+    tableName: 'masteritems',
     schema: [
       { name: 'subCategoryId', type: 'TEXT', notNull: true },
       { name: 'name', type: 'TEXT', notNull: true },
@@ -106,7 +106,7 @@ async function main() {
     uniqueKeyColumns: ['name', 'subCategoryId'],
     duplicateAction: 'update'
   });
-  console.log('Created MasterItems.');
+  console.log('Created masteritems.');
 
   const csvPath = path.join(process.cwd(), '한샘리하우스_ERP_개발 - 품목DB.csv');
   const content = fs.readFileSync(csvPath, 'utf-8');
@@ -145,17 +145,17 @@ async function main() {
   }
 
   console.log(`Importing ${categories.size} categories...`);
-  await callUserDataTool('user_data_insert_rows', { tableName: 'MasterCategories', rows: Array.from(categories.values()) });
+  await callUserDataTool('user_data_insert_rows', { tableName: 'mastercategories', rows: Array.from(categories.values()) });
 
   console.log(`Importing ${subCategories.size} sub-categories...`);
   const subRows = Array.from(subCategories.values());
   for (let i = 0; i < subRows.length; i += 20) {
-    await callUserDataTool('user_data_insert_rows', { tableName: 'MasterSubCategories', rows: subRows.slice(i, i + 20) });
+    await callUserDataTool('user_data_insert_rows', { tableName: 'mastersubcategories', rows: subRows.slice(i, i + 20) });
   }
 
   console.log(`Importing ${items.length} items...`);
   for (let i = 0; i < items.length; i += 50) {
-    await callUserDataTool('user_data_insert_rows', { tableName: 'MasterItems', rows: items.slice(i, i + 50) });
+    await callUserDataTool('user_data_insert_rows', { tableName: 'masteritems', rows: items.slice(i, i + 50) });
     console.log(`Imported ${Math.min(i + 50, items.length)} / ${items.length} items...`);
   }
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 import { useDaumPostcodePopup, Address } from "react-daum-postcode";
 import { StatusBadge } from "@/components/estimate/StatusBadge";
 import type { EstimateStatus } from "@/types/estimate";
@@ -54,27 +55,80 @@ export default function CustomerInfoPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Submitted Data:", formData);
-    router.push("/estimate");
+    try {
+      // 1. Save/Update Customer
+      const customerResponse = await apiFetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!customerResponse.ok) throw new Error("고객 정보 저장 실패");
+      const customerData = await customerResponse.json();
+      const customerId = customerData.id;
+
+      if (!customerId) throw new Error("고객 ID 생성 실패");
+
+      // 2. Create Estimate
+      const estimateResponse = await apiFetch("/api/estimates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId,
+          status: "상담접수",
+        }),
+      });
+
+      if (!estimateResponse.ok) throw new Error("견적서 생성 실패");
+      const estimateData = await estimateResponse.json();
+      
+      router.push(`/estimate?id=${estimateData.id}`);
+    } catch (error) {
+      console.error("Error creating estimate:", error);
+      alert("견적 생성 중 오류가 발생했습니다.");
+    }
   };
 
-  const isExistingCustomer = formData.name === "기존고객";
+  const [existingEstimates, setExistingEstimates] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const previousEstimates = [
-    {
-      estimateCode: "EST-2024-001",
-      customerName: "홍길동",
-      shortAddress: "한남 더힐 302호",
-      estimateDate: "2024-03-01",
-      constructionStartDate: "2024-04-01",
-      constructionEndDate: "2024-06-30",
-      estimateStatus: "견적중",
-      totalAmount: 45000000,
-      manager: "김한샘",
-    },
-  ];
+  const searchExistingCustomer = async (name: string) => {
+    if (name.length < 2) {
+      setExistingEstimates([]);
+      return;
+    }
+    try {
+      setIsSearching(true);
+      const response = await apiFetch(`/api/customers?name=${encodeURIComponent(name)}`);
+      if (response.ok) {
+        const customers = await response.json();
+        if (customers.length > 0) {
+          // If customer found, fetch their estimates
+          const estResponse = await apiFetch("/api/estimates"); // This is a bit inefficient, but works for now
+          if (estResponse.ok) {
+            const allEstimates = await estResponse.json();
+            const customerIds = customers.map((c: any) => c.id);
+            const customerEstimates = allEstimates.filter((e: any) => customerIds.includes(e.customerId));
+            setExistingEstimates(customerEstimates);
+          }
+        } else {
+          setExistingEstimates([]);
+        }
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    handleChange(e);
+    searchExistingCustomer(value);
+  };
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen items-center lg:items-start justify-center bg-zinc-50 py-12 px-4 dark:bg-black sm:px-6 lg:px-8 gap-8">
@@ -99,9 +153,9 @@ export default function CustomerInfoPage() {
                   name="name"
                   type="text"
                   className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 placeholder-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100 dark:placeholder-zinc-400"
-                  placeholder="기존 고객 확인을 위해 '기존고객'을 입력해보세요"
+                  placeholder="고객 성함을 입력하세요"
                   value={formData.name}
-                  onChange={handleChange}
+                  onChange={handleNameChange}
                 />
               </div>
 
@@ -215,21 +269,21 @@ export default function CustomerInfoPage() {
         </div>
       </div>
 
-      {isExistingCustomer && (
+      {existingEstimates.length > 0 && (
         <div className="flex-1 max-w-2xl space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
           <h3 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 px-1">
             이전 견적 내역이 있습니다
           </h3>
           <div className="grid grid-cols-1 gap-6">
-            {previousEstimates.map((est) => (
+            {existingEstimates.map((est) => (
               <Link
                 key={est.estimateCode}
-                href={`/estimate?id=${est.estimateCode}`}
+                href={`/estimate?id=${est.id}`}
                 className="group bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 flex flex-col justify-between"
               >
                 <div className="space-y-4">
                   <div className="flex items-start justify-between">
-                    <StatusBadge status={est.estimateStatus as EstimateStatus} />
+                    <StatusBadge status={est.status as EstimateStatus} />
                     <span className="text-xs font-mono text-zinc-400">
                       {est.estimateCode}
                     </span>

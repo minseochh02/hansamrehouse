@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import type { SpendingRequestItem, EstimateLineItem } from "@/types/estimate";
+import type { SpendingRequestItem, EstimateLineItem, MasterCategory, MasterSubCategory, MasterItem, Vendor } from "@/types/estimate";
 import { ChevronIcon } from "./ChevronIcon";
+import { apiFetch } from "@/lib/api";
 
 interface SpendingRequestDrawerProps {
   item: SpendingRequestItem | null;
@@ -20,6 +21,35 @@ export function SpendingRequestDrawer({
   lineItems = [],
 }: SpendingRequestDrawerProps) {
   const [formData, setFormData] = useState<Partial<SpendingRequestItem>>({});
+  
+  // Master data state
+  const [masterCategories, setMasterCategories] = useState<MasterCategory[]>([]);
+  const [masterSubCategories, setMasterSubCategories] = useState<MasterSubCategory[]>([]);
+  const [masterItems, setMasterItems] = useState<MasterItem[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+
+  useEffect(() => {
+    fetchMasterData();
+  }, []);
+
+  const fetchMasterData = async () => {
+    try {
+      const [catsRes, subsRes, itemsRes, vendorsRes] = await Promise.all([
+        apiFetch("/api/categories"),
+        apiFetch("/api/subcategories"),
+        apiFetch("/api/items"),
+        apiFetch("/api/vendors"),
+      ]);
+
+      if (catsRes.ok) setMasterCategories(await catsRes.json());
+      if (subsRes.ok) setMasterSubCategories(await subsRes.json());
+      if (itemsRes.ok) setMasterItems(await itemsRes.json());
+      if (vendorsRes.ok) setVendors(await vendorsRes.json());
+    } catch (error) {
+      console.error("Failed to fetch master data:", error);
+    }
+  };
+
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     basic: true,
     costs: true,
@@ -158,27 +188,61 @@ export function SpendingRequestDrawer({
           >
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>공정</Label>
+                <Label>공정명</Label>
                 <Input 
+                  list="drawer-categories-list"
                   value={formData.processName || ""} 
                   onChange={(e) => handleChange("processName", e.target.value)}
                   placeholder="예: 철거"
                 />
+                <datalist id="drawer-categories-list">
+                  {masterCategories.map(cat => <option key={cat.id} value={cat.name} />)}
+                </datalist>
               </div>
               <div>
-                <Label>세부공정</Label>
+                <Label>세부공정명</Label>
                 <Input 
+                  list="drawer-subcategories-list"
                   value={formData.subProcessName || ""} 
                   onChange={(e) => handleChange("subProcessName", e.target.value)}
                   placeholder="예: 주방 철거"
                 />
+                <datalist id="drawer-subcategories-list">
+                  {masterSubCategories
+                    .filter(sub => !formData.processName || sub.categoryId === formData.processName)
+                    .map(sub => <option key={sub.id} value={sub.name} />)
+                  }
+                </datalist>
               </div>
               <div className="col-span-2">
                 <Label>품목명</Label>
                 <Input 
+                  list="drawer-items-list"
                   value={formData.itemName || ""} 
-                  onChange={(e) => handleChange("itemName", e.target.value)}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    const matchedItem = masterItems.find(i => i.itemName === name);
+                    if (matchedItem) {
+                      setFormData(prev => ({
+                        ...prev,
+                        itemName: name,
+                        processName: matchedItem.processName || prev.processName,
+                        subProcessName: matchedItem.subProcessName || prev.subProcessName,
+                      }));
+                    } else {
+                      handleChange("itemName", name);
+                    }
+                  }}
                 />
+                <datalist id="drawer-items-list">
+                  {masterItems
+                    .filter(item => 
+                      (!formData.processName || item.processName === formData.processName) &&
+                      (!formData.subProcessName || item.subProcessName === formData.subProcessName)
+                    )
+                    .map(item => <option key={item.id} value={item.itemName} />)
+                  }
+                </datalist>
               </div>
               <div>
                 <Label>일자</Label>
@@ -212,10 +276,31 @@ export function SpendingRequestDrawer({
                 <div>
                   <Label>협력업체명</Label>
                   <Input 
+                    list="drawer-vendors-list"
                     value={formData.vendorName || ""} 
-                    onChange={(e) => handleChange("vendorName", e.target.value)}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      const matchedVendor = vendors.find(v => v.name === name);
+                      if (matchedVendor) {
+                        setFormData(prev => ({
+                          ...prev,
+                          vendorName: name,
+                          bankName: matchedVendor.bankName || prev.bankName,
+                          accountHolder: matchedVendor.accountHolder || prev.accountHolder,
+                          accountNumber: matchedVendor.accountNumber || prev.accountNumber,
+                          isExistingVendorAccount: true,
+                        }));
+                      } else {
+                        handleChange("vendorName", name);
+                      }
+                    }}
                     placeholder="예: 한샘키친"
                   />
+                  <datalist id="drawer-vendors-list">
+                    {vendors.map(vendor => (
+                      <option key={vendor.id} value={vendor.name} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
 

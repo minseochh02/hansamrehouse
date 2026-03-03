@@ -4,24 +4,49 @@ import { TABLE_NAMES } from '../../../../egdesk.config';
 
 export async function GET() {
   try {
-    // Joins to get the full process/subProcess context
-    const query = `
-      SELECT 
-        mi.id as id,
-        mc.name as processName,
-        msc.name as subProcessName,
-        mi.name as itemName,
-        mi.unit as unit
-      FROM ${TABLE_NAMES.table2} mi
-      JOIN ${TABLE_NAMES.table3} msc ON mi.subCategoryId = msc.name
-      JOIN ${TABLE_NAMES.table4} mc ON msc.categoryId = mc.name
-      WHERE mi.isActive = 1
-      ORDER BY mc.displayOrder, msc.displayOrder, mi.name
-    `;
+    // Fetch all required tables to join in memory, avoiding executeSQL restrictions
+    const [itemsRes, subCategoriesRes, categoriesRes] = await Promise.all([
+      queryTable(TABLE_NAMES.table2, { filters: { isActive: '1' } }),
+      queryTable(TABLE_NAMES.table3, { filters: { isActive: '1' } }),
+      queryTable(TABLE_NAMES.table4, { filters: { isActive: '1' } })
+    ]);
+
+    const items = itemsRes?.rows || [];
+    const subCategories = subCategoriesRes?.rows || [];
+    const categories = categoriesRes?.rows || [];
+
+    // Map data together
+    const result = items.map((mi: any) => {
+      const msc = subCategories.find((sc: any) => sc.name === mi.subCategoryId);
+      const mc = categories.find((c: any) => c.name === msc?.categoryId);
+
+      return {
+        id: mi.id,
+        processName: mc?.name || "",
+        subProcessName: msc?.name || "",
+        itemName: mi.name,
+        unit: mi.unit
+      };
+    });
     
-    const result = await executeSQL(query);
-    const items = result?.rows || [];
-    return NextResponse.json(items);
+    // Sort by categories displayOrder, then subCategories displayOrder, then name
+    result.sort((a: any, b: any) => {
+      const catA = categories.find(c => c.name === a.processName);
+      const catB = categories.find(c => c.name === b.processName);
+      if ((catA?.displayOrder || 0) !== (catB?.displayOrder || 0)) {
+        return (catA?.displayOrder || 0) - (catB?.displayOrder || 0);
+      }
+      
+      const subA = subCategories.find(s => s.name === a.subProcessName);
+      const subB = subCategories.find(s => s.name === b.subProcessName);
+      if ((subA?.displayOrder || 0) !== (subB?.displayOrder || 0)) {
+        return (subA?.displayOrder || 0) - (subB?.displayOrder || 0);
+      }
+      
+      return a.itemName.localeCompare(b.itemName);
+    });
+
+    return NextResponse.json(result);
   } catch (error: any) {
     console.error('Failed to fetch items:', error);
     return NextResponse.json([], { status: 500 });
@@ -92,14 +117,12 @@ export async function PATCH(request: NextRequest) {
     if (subProcessName) {
       let catName = processName;
       if (!catName) {
-        const res = await executeSQL(`
-          SELECT mc.name 
-          FROM ${TABLE_NAMES.table2} mi 
-          JOIN ${TABLE_NAMES.table3} msc ON mi.subCategoryId = msc.name 
-          JOIN ${TABLE_NAMES.table4} mc ON msc.categoryId = mc.name 
-          WHERE mi.id = '${id}'
-        `);
-        catName = res.rows?.[0]?.name;
+        const itemRes = await queryTable(TABLE_NAMES.table2, { filters: { id: id.toString() } });
+        const subCatName = itemRes.rows?.[0]?.subCategoryId;
+        if (subCatName) {
+          const subCatRes = await queryTable(TABLE_NAMES.table3, { filters: { name: subCatName } });
+          catName = subCatRes.rows?.[0]?.categoryId;
+        }
       }
       
       if (catName) {

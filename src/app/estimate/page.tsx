@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 import type {
   Estimate,
   EstimateStatus,
@@ -20,47 +22,110 @@ import { SpendingRequestUnifiedTable } from "@/components/estimate/SpendingReque
 import { SpendingRequestDrawer } from "@/components/estimate/SpendingRequestDrawer";
 import { ChevronIcon } from "@/components/estimate/ChevronIcon";
 
-const MOCK_ESTIMATE: Estimate = {
-  customerName: "홍길동",
-  shortAddress: "한남 더힐 302호",
-  estimateDate: "2024-03-01",
-  constructionStartDate: "2024-04-01",
-  constructionEndDate: "2024-06-30",
+const EMPTY_ESTIMATE: Estimate = {
+  customerName: "",
+  shortAddress: "",
+  estimateDate: new Date().toISOString().split('T')[0],
+  constructionStartDate: "",
+  constructionEndDate: "",
   additionalEstimateDate: "",
   additionalConstructionStartDate: "",
   additionalConstructionEndDate: "",
-  manager: "김한샘",
-  siteManager: "박현장",
-  estimateCode: "EST-2024-001",
-  estimateStatus: "견적중",
-  siteCode: "SITE-HN-302",
-  totalAmount: 45000000,
-  contract: { date: "2024-03-15", percentage: 30, amount: 13500000 },
-  commencement: { date: "2024-04-01", percentage: 30, amount: 13500000 },
-  midterm: { date: "2024-05-15", percentage: 30, amount: 13500000 },
-  moveInCleaningDate: "2024-06-28",
-  balance: { date: "2024-06-30", percentage: 10, amount: 4500000 },
-  lineItems: [
-    { id: "1", category: "철거", subCategory: "주방", name: "기존 주방 철거", unit: "식", quantity: 1, materialUnitPrice: 0, laborUnitPrice: 800000, expenseUnitPrice: 0, unitPrice: 800000, amount: 800000, note: "" },
-    { id: "2", category: "철거", subCategory: "욕실", name: "기존 욕실 철거", unit: "식", quantity: 2, materialUnitPrice: 0, laborUnitPrice: 600000, expenseUnitPrice: 0, unitPrice: 600000, amount: 1200000, note: "욕실 2개" },
-    { id: "3", category: "목공", subCategory: "주방", name: "주방 상부장", unit: "M", quantity: 4.5, materialUnitPrice: 350000, laborUnitPrice: 0, expenseUnitPrice: 0, unitPrice: 350000, amount: 1575000, note: "" },
-    { id: "4", category: "목공", subCategory: "주방", name: "주방 하부장", unit: "M", quantity: 3.2, materialUnitPrice: 400000, laborUnitPrice: 0, expenseUnitPrice: 0, unitPrice: 400000, amount: 1280000, note: "" },
-    { id: "5", category: "타일", subCategory: "주방", name: "주방 벽 타일", unit: "㎡", quantity: 12, materialUnitPrice: 85000, laborUnitPrice: 0, expenseUnitPrice: 0, unitPrice: 85000, amount: 1020000, note: "" },
-    { id: "6", category: "타일", subCategory: "욕실", name: "욕실 바닥 타일", unit: "㎡", quantity: 8, materialUnitPrice: 95000, laborUnitPrice: 0, expenseUnitPrice: 0, unitPrice: 95000, amount: 760000, note: "" },
-    { id: "7", category: "도장", subCategory: "거실", name: "거실 벽면 도장", unit: "㎡", quantity: 85, materialUnitPrice: 12000, laborUnitPrice: 0, expenseUnitPrice: 0, unitPrice: 12000, amount: 1020000, note: "" },
-    { id: "8", category: "설비", subCategory: "주방", name: "26평 공용부 융 스위치, 콘센트 교체 자재비(인건비 별도)// 듀로 플라스틱 매트화이트 기준-100", unit: "식", quantity: 1, materialUnitPrice: 500000, laborUnitPrice: 1000000, expenseUnitPrice: 0, unitPrice: 1500000, amount: 1500000, note: "" },
-    { id: "9", category: "전기", subCategory: "전체", name: "조명 교체", unit: "EA", quantity: 15, materialUnitPrice: 45000, laborUnitPrice: 0, expenseUnitPrice: 0, unitPrice: 45000, amount: 675000, note: "거실+주방" },
-    { id: "10", category: "공사준비", subCategory: "공사준비", name: "공사 동의서(공사 동의율 40% 기준)", unit: "식", quantity: 1, materialUnitPrice: 0, laborUnitPrice: 0, expenseUnitPrice: 100000, unitPrice: 100000, amount: 100000, note: "" },
-    { id: "11", category: "공사준비", subCategory: "공사준비", name: "공사 동의서(공사 동의율 60% 기준)", unit: "식", quantity: 1, materialUnitPrice: 0, laborUnitPrice: 0, expenseUnitPrice: 150000, unitPrice: 150000, amount: 150000, note: "" },
-  ],
+  manager: "",
+  siteManager: "",
+  estimateCode: "",
+  estimateStatus: "상담접수",
+  siteCode: "",
+  totalAmount: 0,
+  contract: { date: "", percentage: 0, amount: 0 },
+  commencement: { date: "", percentage: 0, amount: 0 },
+  midterm: { date: "", percentage: 0, amount: 0 },
+  moveInCleaningDate: "",
+  balance: { date: "", percentage: 0, amount: 0 },
+  lineItems: [],
   additionalLineItems: [],
   spendingRequests: [],
 };
 
 export default function EstimatePage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const estimateId = searchParams.get("id");
+
   const [overviewOpen, setOverviewOpen] = useState(true);
-  const [estimate, setEstimate] = useState<Estimate>(MOCK_ESTIMATE);
+  const [estimate, setEstimate] = useState<Estimate>(EMPTY_ESTIMATE);
+  const [isLoading, setIsLoading] = useState(!!estimateId);
   const [spendingFilter, setSpendingFilter] = useState<SpendingFilter>({ type: "none", value: "" });
+
+  useEffect(() => {
+    if (estimateId) {
+      fetchEstimate(estimateId);
+    }
+  }, [estimateId]);
+
+  const fetchEstimate = async (id: string) => {
+    try {
+      setIsLoading(true);
+      const response = await apiFetch(`/api/estimates/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setEstimate(data);
+      } else {
+        console.error(`Failed to fetch estimate: ${response.status} ${response.statusText}`);
+        alert(`견적을 불러올 수 없습니다. (${response.status})`);
+        // Keep EMPTY_ESTIMATE as fallback
+      }
+    } catch (error) {
+      console.error("Failed to fetch estimate:", error);
+      alert("견적 정보를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!estimateId) return;
+    try {
+      const response = await apiFetch(`/api/estimates/${estimateId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(estimate),
+      });
+      if (response.ok) {
+        alert("성공적으로 저장되었습니다.");
+      } else {
+        throw new Error("저장 실패");
+      }
+    } catch (error) {
+      console.error("Failed to save estimate:", error);
+      alert("저장 중 오류가 발생했습니다.");
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!estimateId) return;
+    if (!confirm("정말로 이 견적을 삭제하시겠습니까? 관련 데이터(일정, 품목, 지출결의 등)가 모두 삭제되며 복구할 수 없습니다.")) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await apiFetch(`/api/estimates/${estimateId}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        alert("성공적으로 삭제되었습니다.");
+        router.push("/estimates");
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "삭제 실패");
+      }
+    } catch (error: any) {
+      console.error("Failed to delete estimate:", error);
+      alert(`삭제 중 오류가 발생했습니다: ${error.message}`);
+      setIsLoading(false);
+    }
+  };
 
   // Spending Request Drawer State
   const [isSpendingDrawerOpen, setIsSpendingDrawerOpen] = useState(false);
@@ -102,9 +167,9 @@ export default function EstimatePage() {
       laborActualCost: 0,
       expenseEstimateCost: expEst,
       expenseActualCost: 0,
-      materialPreviouslySpent: 0,
-      laborPreviouslySpent: 0,
-      expensePreviouslySpent: 0,
+      materialPreviouslySpent: matSpent,
+      laborPreviouslySpent: labSpent,
+      expensePreviouslySpent: expSpent,
       totalEstimateCost: matEst + labEst + expEst,
       totalSpendingActual: 0,
       evidenceType: "",
@@ -163,9 +228,9 @@ export default function EstimatePage() {
       laborActualCost: 0,
       expenseEstimateCost: expEst,
       expenseActualCost: 0,
-      materialPreviouslySpent: 0,
-      laborPreviouslySpent: 0,
-      expensePreviouslySpent: 0,
+      materialPreviouslySpent: matSpent,
+      laborPreviouslySpent: labSpent,
+      expensePreviouslySpent: expSpent,
       totalEstimateCost: matEst + labEst + expEst,
       totalSpendingActual: 0,
       evidenceType: "",
@@ -395,6 +460,14 @@ export default function EstimatePage() {
     }));
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
+        <div className="text-zinc-500 animate-pulse font-medium">견적 정보를 불러오는 중...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black">
       {/* Top Bar with Collapsible Overview */}
@@ -472,6 +545,15 @@ export default function EstimatePage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDelete}
+                  className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 transition-colors"
+                  title="견적 삭제"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
                 <button
                   onClick={() => setOverviewOpen((v) => !v)}
                   className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
@@ -580,7 +662,7 @@ export default function EstimatePage() {
 
       {/* 통합 관리 Section */}
       <div className="mx-auto px-4 sm:px-6 py-8 max-w-[1600px]">
-        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-lg h-[900px] flex flex-col">
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-lg max-h-[1000px] flex flex-col">
           <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/20">
             <div className="flex items-center gap-3">
               <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider flex items-center gap-2">
@@ -657,16 +739,13 @@ export default function EstimatePage() {
         {/* Bottom Action Section */}
         <div className="mt-12 flex flex-col items-center gap-4 pb-20">
           <button
-            onClick={() => {
-              // This would typically trigger a final save or API call
-              alert("견적서가 제출되었습니다.");
-            }}
+            onClick={handleSave}
             className="w-full max-w-sm py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold transition-all shadow-xl shadow-indigo-600/20 active:scale-[0.98] flex items-center justify-center gap-3"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
             </svg>
-            견적서 제출하기
+            견적 내용 저장하기
           </button>
           
           <Link

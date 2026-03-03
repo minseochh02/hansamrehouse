@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function Home() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center p-4">
-      <div className="max-w-6xl w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="max-w-7xl w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {/* Customer / Estimate Section */}
         <Link 
           href="/estimates"
@@ -22,12 +22,12 @@ export default function Home() {
               </svg>
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">고객 및 견적 관리</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">고객 및 견적 관리</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm leading-relaxed">
                 현장별 견적 내역을 확인하고,<br />새로운 고객 및 견적을 등록합니다.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-sm pt-4">
+            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-xs pt-2">
               내역 보기
               <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -54,13 +54,77 @@ export default function Home() {
               </svg>
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">지출 결제 관리</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">지출 결제 관리</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm leading-relaxed">
                 모든 현장의 지출 요청을 한눈에 확인하고,<br />송금 및 결제 상태를 관리합니다.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm pt-4">
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs pt-2">
               관리자 페이지 이동
+              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </div>
+          </div>
+        </Link>
+
+        {/* Employee Section */}
+        <Link 
+          href="/settings/employees"
+          className="group relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+            <svg className="w-32 h-32 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </div>
+
+          <div className="relative z-10 space-y-4">
+            <div className="w-14 h-14 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">사원 및 고용주 관리</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm leading-relaxed">
+                대표, 현장 소장, 소속 사원의<br />연락처 및 계좌 정보를 관리합니다.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-xs pt-2">
+              관리 페이지 이동
+              <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </div>
+          </div>
+        </Link>
+
+        {/* Vendor Section */}
+        <Link 
+          href="/settings/vendors"
+          className="group relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+            <svg className="w-32 h-32 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+
+          <div className="relative z-10 space-y-4">
+            <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">협력업체 관리</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm leading-relaxed">
+                물품 및 서비스를 공급하는<br />협력업체의 상세 정보를 관리합니다.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs pt-2">
+              관리 페이지 이동
               <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
@@ -86,12 +150,12 @@ export default function Home() {
               </svg>
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">표준 품목 관리</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">표준 품목 관리</h2>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-2 text-sm leading-relaxed">
                 공정, 세부공정, 품목명을 설정하여<br />내역서 및 지출 결의 시 활용합니다.
               </p>
             </div>
-            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-sm pt-4">
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs pt-2">
               설정 페이지 이동
               <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />

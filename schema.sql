@@ -3,8 +3,8 @@
 
 PRAGMA foreign_keys = ON;
 
--- 1. MasterCategories Table
-CREATE TABLE MasterCategories (
+-- 1. mastercategories Table
+CREATE TABLE mastercategories (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     displayOrder INTEGER DEFAULT 0,
@@ -14,7 +14,7 @@ CREATE TABLE MasterCategories (
 );
 
 -- 2. MasterSubCategories Table
-CREATE TABLE MasterSubCategories (
+CREATE TABLE mastersubcategories (
     id TEXT PRIMARY KEY,
     categoryId TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -22,11 +22,11 @@ CREATE TABLE MasterSubCategories (
     isActive INTEGER DEFAULT 1 CHECK (isActive IN (0, 1)),
     createdAt TEXT DEFAULT (datetime('now')),
     updatedAt TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (categoryId) REFERENCES MasterCategories(id) ON DELETE CASCADE
+    FOREIGN KEY (categoryId) REFERENCES mastercategories(id) ON DELETE CASCADE
 );
 
 -- 3. MasterItems Table
-CREATE TABLE MasterItems (
+CREATE TABLE masteritems (
     id TEXT PRIMARY KEY,
     subCategoryId TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -34,11 +34,11 @@ CREATE TABLE MasterItems (
     isActive INTEGER DEFAULT 1 CHECK (isActive IN (0, 1)),
     createdAt TEXT DEFAULT (datetime('now')),
     updatedAt TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (subCategoryId) REFERENCES MasterSubCategories(id) ON DELETE CASCADE
+    FOREIGN KEY (subCategoryId) REFERENCES mastersubcategories(id) ON DELETE CASCADE
 );
 
 -- 4. Employees Table
-CREATE TABLE Employees (
+CREATE TABLE employees (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     phone TEXT,
@@ -53,7 +53,7 @@ CREATE TABLE Employees (
 );
 
 -- 5. Vendors Table (협력업체)
-CREATE TABLE Vendors (
+CREATE TABLE vendors (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     businessNumber TEXT,
@@ -69,7 +69,7 @@ CREATE TABLE Vendors (
 );
 
 -- 6. Customers Table
-CREATE TABLE Customers (
+CREATE TABLE customers (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     postcode TEXT,
@@ -84,7 +84,7 @@ CREATE TABLE Customers (
 );
 
 -- 7. Estimates Table
-CREATE TABLE Estimates (
+CREATE TABLE estimates (
     id TEXT PRIMARY KEY,
     customerId TEXT NOT NULL,
     estimateCode TEXT UNIQUE,
@@ -95,13 +95,13 @@ CREATE TABLE Estimates (
     totalAmount REAL DEFAULT 0,
     createdAt TEXT DEFAULT (datetime('now')),
     updatedAt TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (customerId) REFERENCES Customers(id),
-    FOREIGN KEY (managerId) REFERENCES Employees(id),
-    FOREIGN KEY (siteManagerId) REFERENCES Employees(id)
+    FOREIGN KEY (customerId) REFERENCES customers(id),
+    FOREIGN KEY (managerId) REFERENCES employees(id),
+    FOREIGN KEY (siteManagerId) REFERENCES employees(id)
 );
 
 -- 8. Schedules Table
-CREATE TABLE Schedules (
+CREATE TABLE schedules (
     id TEXT PRIMARY KEY,
     estimateId TEXT NOT NULL,
     type TEXT NOT NULL CHECK (type IN ('ESTIMATE', 'CONSTRUCTION_START', 'CONSTRUCTION_END', 'MOVE_IN_CLEANING', 'ADDITIONAL_ESTIMATE', 'ADDITIONAL_START', 'ADDITIONAL_END')),
@@ -109,11 +109,11 @@ CREATE TABLE Schedules (
     note TEXT,
     createdAt TEXT DEFAULT (datetime('now')),
     updatedAt TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (estimateId) REFERENCES Estimates(id) ON DELETE CASCADE
+    FOREIGN KEY (estimateId) REFERENCES estimates(id) ON DELETE CASCADE
 );
 
 -- 9. PaymentMilestones Table
-CREATE TABLE PaymentMilestones (
+CREATE TABLE paymentmilestones (
     id TEXT PRIMARY KEY,
     estimateId TEXT NOT NULL,
     type TEXT NOT NULL CHECK (type IN ('contract', 'commencement', 'midterm', 'balance')),
@@ -122,11 +122,11 @@ CREATE TABLE PaymentMilestones (
     amount REAL,
     createdAt TEXT DEFAULT (datetime('now')),
     updatedAt TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (estimateId) REFERENCES Estimates(id) ON DELETE CASCADE
+    FOREIGN KEY (estimateId) REFERENCES estimates(id) ON DELETE CASCADE
 );
 
 -- 10. LineItems Table
-CREATE TABLE LineItems (
+CREATE TABLE lineitems (
     id TEXT PRIMARY KEY,
     estimateId TEXT NOT NULL,
     masterItemId TEXT,
@@ -146,13 +146,13 @@ CREATE TABLE LineItems (
     note TEXT,
     requestDate TEXT,
     createdAt TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (estimateId) REFERENCES Estimates(id) ON DELETE CASCADE,
-    FOREIGN KEY (masterItemId) REFERENCES MasterItems(id),
-    FOREIGN KEY (previousId) REFERENCES LineItems(id)
+    FOREIGN KEY (estimateId) REFERENCES estimates(id) ON DELETE CASCADE,
+    FOREIGN KEY (masterItemId) REFERENCES masteritems(id),
+    FOREIGN KEY (previousId) REFERENCES lineitems(id)
 );
 
 -- 11. SpendingRequests Table
-CREATE TABLE SpendingRequests (
+CREATE TABLE spendingrequests (
     id TEXT PRIMARY KEY,
     estimateId TEXT NOT NULL,
     lineItemId TEXT,
@@ -181,14 +181,14 @@ CREATE TABLE SpendingRequests (
     date TEXT,
     createdAt TEXT DEFAULT (datetime('now')),
     updatedAt TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (estimateId) REFERENCES Estimates(id) ON DELETE CASCADE,
-    FOREIGN KEY (lineItemId) REFERENCES LineItems(id),
-    FOREIGN KEY (vendorId) REFERENCES Vendors(id),
-    FOREIGN KEY (employeeId) REFERENCES Employees(id)
+    FOREIGN KEY (estimateId) REFERENCES estimates(id) ON DELETE CASCADE,
+    FOREIGN KEY (lineItemId) REFERENCES lineitems(id),
+    FOREIGN KEY (vendorId) REFERENCES vendors(id),
+    FOREIGN KEY (employeeId) REFERENCES employees(id)
 );
 
 -- 12. Attachments Table
-CREATE TABLE Attachments (
+CREATE TABLE attachments (
     id TEXT PRIMARY KEY,
     estimateId TEXT NOT NULL,
     spendingRequestId TEXT,
@@ -200,9 +200,9 @@ CREATE TABLE Attachments (
     uploadedById TEXT,
     createdAt TEXT DEFAULT (datetime('now')),
     updatedAt TEXT DEFAULT (datetime('now')),
-    FOREIGN KEY (estimateId) REFERENCES Estimates(id) ON DELETE CASCADE,
-    FOREIGN KEY (spendingRequestId) REFERENCES SpendingRequests(id) ON DELETE SET NULL,
-    FOREIGN KEY (uploadedById) REFERENCES Employees(id)
+    FOREIGN KEY (estimateId) REFERENCES estimates(id) ON DELETE CASCADE,
+    FOREIGN KEY (spendingRequestId) REFERENCES spendingrequests(id) ON DELETE SET NULL,
+    FOREIGN KEY (uploadedById) REFERENCES employees(id)
 );
 
 -- Trigger to update 'updatedAt' columns automatically

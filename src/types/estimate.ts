@@ -130,3 +130,36 @@ export interface SpendingFilter {
   type: "category" | "subCategory" | "itemName" | "vendorName" | "none";
   value: string;
 }
+
+export interface MasterCategory {
+  id: string;
+  name: string;
+  displayOrder: number;
+}
+
+export interface MasterSubCategory {
+  id: string;
+  name: string;
+  categoryId: string;
+  displayOrder: number;
+}
+
+export interface MasterItem {
+  id: string;
+  processName: string;
+  subProcessName: string;
+  itemName: string;
+  unit: string;
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  businessNumber?: string;
+  representative?: string;
+  phone?: string;
+  address?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountHolder?: string;
+}

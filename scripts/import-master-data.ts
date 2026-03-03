@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const API_KEY = '027901a3-c678-4fa0-8d3c-2532d961c001';
+const API_KEY = '35813a42-b8aa-4d0a-a3eb-e16833652f2c';
 const API_URL = 'http://localhost:8080/user-data/tools/call';
 
 async function callUserDataTool(toolName: string, args: any) {

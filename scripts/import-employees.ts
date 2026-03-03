@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const API_KEY = '027901a3-c678-4fa0-8d3c-2532d961c001';
+const API_KEY = '35813a42-b8aa-4d0a-a3eb-e16833652f2c';
 const API_URL = 'http://localhost:8080/user-data/tools/call';
 
 async function callUserDataTool(toolName: string, args: any) {
@@ -88,19 +88,19 @@ async function main() {
     accountHolder: null
   }));
 
-  // Recreate Employees table to ensure schema matches natural ID preference
+  // Recreate employees table to ensure schema matches natural ID preference
   // First delete if exists
   try {
-    await callUserDataTool('user_data_delete_table', { tableName: 'Employees' });
-    console.log('Deleted existing Employees table.');
+    await callUserDataTool('user_data_delete_table', { tableName: 'employees' });
+    console.log('Deleted existing employees table.');
   } catch (e) {
-    console.log('Employees table not found.');
+    console.log('employees table not found.');
   }
 
   // Create table
   await callUserDataTool('user_data_create_table', {
     displayName: 'Employees',
-    tableName: 'Employees',
+    tableName: 'employees',
     schema: [
       { name: 'name', type: 'TEXT', notNull: true },
       { name: 'phone', type: 'TEXT' },
@@ -114,17 +114,17 @@ async function main() {
     uniqueKeyColumns: ['id'], // Using the system's hidden id for 사원번호
     description: 'Imported from 사원DB.csv'
   });
-  console.log('Created Employees table.');
+  console.log('Created employees table.');
 
-  // Note: user_data_insert_rows expects an 'id' if we want to set it manually, 
-  // but EGDesk usually auto-generates a UUID. 
+  // Note: user_data_insert_rows expects an 'id' if we want to set it manually,
+  // but EGDesk usually auto-generates a UUID.
   // Let's try to pass 'id' explicitly.
-  
+
   const CHUNK_SIZE = 20;
   for (let i = 0; i < employees.length; i += CHUNK_SIZE) {
     const chunk = employees.slice(i, i + CHUNK_SIZE);
-    await callUserDataTool('user_data_insert_rows', { 
-      tableName: 'Employees', 
+    await callUserDataTool('user_data_insert_rows', {
+      tableName: 'employees', 
       rows: chunk 
     });
     console.log(`Imported ${Math.min(i + CHUNK_SIZE, employees.length)} / ${employees.length} employees...`);

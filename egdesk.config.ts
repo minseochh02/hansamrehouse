@@ -1,13 +1,13 @@
 /**
  * EGDesk User Data Configuration
- * Generated at: 2026-03-03T08:40:14.596Z
+ * Generated at: 2026-03-03T15:42:03.756Z
  *
  * This file contains type-safe definitions for your EGDesk tables.
  */
 
 export const EGDESK_CONFIG = {
   apiUrl: 'http://localhost:8080',
-  apiKey: 'ee176595-5bc0-4c4d-84cf-aad2f72a9275',
+  apiKey: '35813a42-b8aa-4d0a-a3eb-e16833652f2c',
 } as const;
 
 export interface TableDefinition {
@@ -32,7 +32,7 @@ export const TABLES = {
     name: 'MasterItems',
     displayName: 'MasterItems',
     description: undefined,
-    rowCount: 741,
+    rowCount: 739,
     columnCount: 5,
     columns: ['id', 'subCategoryId', 'name', 'unit', 'isActive']
   } as TableDefinition,
@@ -40,7 +40,7 @@ export const TABLES = {
     name: 'MasterSubCategories',
     displayName: 'MasterSubCategories',
     description: undefined,
-    rowCount: 62,
+    rowCount: 61,
     columnCount: 5,
     columns: ['id', 'categoryId', 'name', 'displayOrder', 'isActive']
   } as TableDefinition,
@@ -48,7 +48,7 @@ export const TABLES = {
     name: 'MasterCategories',
     displayName: 'MasterCategories',
     description: undefined,
-    rowCount: 23,
+    rowCount: 22,
     columnCount: 4,
     columns: ['id', 'name', 'displayOrder', 'isActive']
   } as TableDefinition,
@@ -104,7 +104,7 @@ export const TABLES = {
     name: 'Customers',
     displayName: 'Customers',
     description: 'Imported from schema.sql',
-    rowCount: undefined,
+    rowCount: 13,
     columnCount: 11,
     columns: ['id', 'name', 'postcode', 'address', 'detailAddress', 'shortAddress', 'size', 'phone1', 'phone2', 'createdAt', 'updatedAt']
   } as TableDefinition,
@@ -130,16 +130,16 @@ export function getTableByName(tableName: string): TableDefinition | undefined {
 
 // Export table names for easy access
 export const TABLE_NAMES = {
-  table1: 'Employees',
-  table2: 'MasterItems',
-  table3: 'MasterSubCategories',
-  table4: 'MasterCategories',
-  table5: 'Attachments',
-  table6: 'SpendingRequests',
-  table7: 'LineItems',
-  table8: 'PaymentMilestones',
-  table9: 'Schedules',
-  table10: 'Estimates',
-  table11: 'Customers',
-  table12: 'Vendors'
+  table1: 'employees',
+  table2: 'masteritems',
+  table3: 'mastersubcategories',
+  table4: 'mastercategories',
+  table5: 'attachments',
+  table6: 'spendingrequests',
+  table7: 'lineitems',
+  table8: 'paymentmilestones',
+  table9: 'schedules',
+  table10: 'estimates',
+  table11: 'customers',
+  table12: 'vendors'
 } as const;
