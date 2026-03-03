@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeSQL, deleteRows } from '../../../../egdesk-helpers';
+import { deleteRows, queryTable, updateRows, aggregateTable } from '../../../../egdesk-helpers';
+import { TABLE_NAMES } from '../../../../egdesk.config';
 
 export async function GET() {
   try {
-    const categories = await executeSQL('SELECT * FROM MasterCategories WHERE isActive = 1 ORDER BY displayOrder, name');
+    const categories = await queryTable(TABLE_NAMES.table4, {
+      filters: { isActive: '1' },
+      orderBy: 'displayOrder',
+      orderDirection: 'ASC'
+    });
     return NextResponse.json(categories.rows || []);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
-
-function escapeSql(str: string) {
-  return str.replace(/'/g, "''");
 }
 
 export async function PATCH(request: NextRequest) {
@@ -22,13 +23,17 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Missing names' }, { status: 400 });
     }
 
-    const escapedOld = escapeSql(oldName);
-    const escapedNew = escapeSql(newName);
-
     // 1. Update SubCategories first
-    await executeSQL(`UPDATE MasterSubCategories SET categoryId = '${escapedNew}' WHERE categoryId = '${escapedOld}'`);
+    await updateRows(TABLE_NAMES.table3, 
+      { categoryId: newName }, 
+      { filters: { categoryId: oldName } }
+    );
+    
     // 2. Update Category name
-    await executeSQL(`UPDATE MasterCategories SET name = '${escapedNew}' WHERE name = '${escapedOld}'`);
+    await updateRows(TABLE_NAMES.table4, 
+      { name: newName }, 
+      { filters: { name: oldName } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -43,26 +48,24 @@ export async function DELETE(request: NextRequest) {
 
     if (!name) return NextResponse.json({ error: 'Missing category name' }, { status: 400 });
 
-    const escapedName = escapeSql(name);
-
     // Cascading logic: 
     // 1. Delete items in subcategories of this category
-    const subCategories = await executeSQL(`SELECT name FROM MasterSubCategories WHERE categoryId = '${escapedName}'`);
+    const subCategories = await queryTable(TABLE_NAMES.table3, {
+      filters: { categoryId: name }
+    });
     const subCategoryNames = (subCategories.rows || []).map((sc: any) => sc.name);
     
     if (subCategoryNames.length > 0) {
-      // Since deleteRows might not support IN clause in filters easily depending on implementation,
-      // we'll loop or use the tool if it supports arrays. Assuming standard key-value for now.
       for (const scName of subCategoryNames) {
-        await deleteRows('MasterItems', { subCategoryId: scName });
+        await deleteRows(TABLE_NAMES.table2, { filters: { subCategoryId: scName } });
       }
     }
 
     // 2. Delete subcategories
-    await deleteRows('MasterSubCategories', { categoryId: name });
+    await deleteRows(TABLE_NAMES.table3, { filters: { categoryId: name } });
     
     // 3. Delete category
-    await deleteRows('MasterCategories', { name: name });
+    await deleteRows(TABLE_NAMES.table4, { filters: { name: name } });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeSQL, insertRows, deleteRows } from '../../../../egdesk-helpers';
+import { executeSQL, insertRows, deleteRows, queryTable, aggregateTable, updateRows } from '../../../../egdesk-helpers';
+import { TABLE_NAMES } from '../../../../egdesk.config';
 
 export async function GET() {
   try {
     // Joins to get the full process/subProcess context
-    // Using the schema structure from scripts/recreate-master-data.ts where names were used as IDs
     const query = `
       SELECT 
-        mi.rowid as id,
+        mi.id as id,
         mc.name as processName,
         msc.name as subProcessName,
         mi.name as itemName,
         mi.unit as unit
-      FROM MasterItems mi
-      JOIN MasterSubCategories msc ON mi.subCategoryId = msc.name
-      JOIN MasterCategories mc ON msc.categoryId = mc.name
+      FROM ${TABLE_NAMES.table2} mi
+      JOIN ${TABLE_NAMES.table3} msc ON mi.subCategoryId = msc.name
+      JOIN ${TABLE_NAMES.table4} mc ON msc.categoryId = mc.name
       WHERE mi.isActive = 1
       ORDER BY mc.displayOrder, msc.displayOrder, mi.name
     `;
@@ -28,10 +28,6 @@ export async function GET() {
   }
 }
 
-function escapeSql(str: string) {
-  return str.replace(/'/g, "''");
-}
-
 export async function POST(request: NextRequest) {
   try {
     const { processName, subProcessName, itemName, unit } = await request.json();
@@ -40,35 +36,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const escapedProcess = escapeSql(processName);
-    const escapedSubProcess = escapeSql(subProcessName);
-    const escapedItem = escapeSql(itemName);
-    const escapedUnit = escapeSql(unit || '식');
-
     // 1. Ensure Category exists
     if (processName) {
-      const catExists = await executeSQL(`SELECT name FROM MasterCategories WHERE name = '${escapedProcess}'`);
+      const catExists = await queryTable(TABLE_NAMES.table4, { filters: { name: processName } });
       if (catExists.rows?.length === 0) {
-        const maxOrder = await executeSQL('SELECT MAX(displayOrder) as maxOrder FROM MasterCategories');
-        const nextOrder = (maxOrder.rows?.[0]?.maxOrder || 0) + 1;
+        const maxOrderRes = await aggregateTable(TABLE_NAMES.table4, 'displayOrder', 'MAX');
+        const nextOrder = (Number(maxOrderRes.result) || 0) + 1;
         
-        await insertRows('MasterCategories', [{ name: processName, displayOrder: nextOrder, isActive: 1 }]);
+        await insertRows(TABLE_NAMES.table4, [{ name: processName, displayOrder: nextOrder, isActive: 1 }]);
       }
     }
 
     // 2. Ensure SubCategory exists
     if (subProcessName) {
-      const subExists = await executeSQL(`SELECT name FROM MasterSubCategories WHERE name = '${escapedSubProcess}' AND categoryId = '${escapedProcess}'`);
+      const subExists = await queryTable(TABLE_NAMES.table3, { filters: { name: subProcessName, categoryId: processName } });
       if (subExists.rows?.length === 0) {
-        const maxOrder = await executeSQL(`SELECT MAX(displayOrder) as maxOrder FROM MasterSubCategories WHERE categoryId = '${escapedProcess}'`);
-        const nextOrder = (maxOrder.rows?.[0]?.maxOrder || 0) + 1;
+        const maxOrderRes = await aggregateTable(TABLE_NAMES.table3, 'displayOrder', 'MAX', { filters: { categoryId: processName } });
+        const nextOrder = (Number(maxOrderRes.result) || 0) + 1;
 
-        await insertRows('MasterSubCategories', [{ categoryId: processName, name: subProcessName, displayOrder: nextOrder, isActive: 1 }]);
+        await insertRows(TABLE_NAMES.table3, [{ categoryId: processName, name: subProcessName, displayOrder: nextOrder, isActive: 1 }]);
       }
     }
 
     // 3. Insert Item
-    const result = await insertRows('MasterItems', [{ subCategoryId: subProcessName, name: itemName, unit: unit || '식', isActive: 1 }]);
+    const result = await insertRows(TABLE_NAMES.table2, [{ subCategoryId: subProcessName, name: itemName, unit: unit || '식', isActive: 1 }]);
 
     return NextResponse.json({ success: true, result });
   } catch (error: any) {
@@ -85,8 +76,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Missing item id' }, { status: 400 });
     }
 
-    // Fetch existing item to ensure we have all required fields for insertRows (upsert)
-    const existingRes = await executeSQL(`SELECT * FROM MasterItems WHERE id = ${id}`);
+    // Fetch existing item
+    const existingRes = await queryTable(TABLE_NAMES.table2, { filters: { id: id.toString() } });
     const existing = existingRes.rows?.[0];
     
     if (!existing) {
@@ -95,7 +86,7 @@ export async function PATCH(request: NextRequest) {
 
     // If we are updating names, we need to ensure the parent categories exist
     if (processName) {
-      await insertRows('MasterCategories', [{ name: processName, displayOrder: 0, isActive: 1 }]);
+      await insertRows(TABLE_NAMES.table4, [{ name: processName, displayOrder: 0, isActive: 1 }]);
     }
 
     if (subProcessName) {
@@ -103,27 +94,28 @@ export async function PATCH(request: NextRequest) {
       if (!catName) {
         const res = await executeSQL(`
           SELECT mc.name 
-          FROM MasterItems mi 
-          JOIN MasterSubCategories msc ON mi.subCategoryId = msc.name 
-          JOIN MasterCategories mc ON msc.categoryId = mc.name 
-          WHERE mi.id = ${id}
+          FROM ${TABLE_NAMES.table2} mi 
+          JOIN ${TABLE_NAMES.table3} msc ON mi.subCategoryId = msc.name 
+          JOIN ${TABLE_NAMES.table4} mc ON msc.categoryId = mc.name 
+          WHERE mi.id = '${id}'
         `);
         catName = res.rows?.[0]?.name;
       }
       
       if (catName) {
-        await insertRows('MasterSubCategories', [{ categoryId: catName, name: subProcessName, displayOrder: 0, isActive: 1 }]);
+        await insertRows(TABLE_NAMES.table3, [{ categoryId: catName, name: subProcessName, displayOrder: 0, isActive: 1 }]);
       }
     }
 
-    // Perform upsert using insertRows
-    await insertRows('MasterItems', [{
-      id: id.toString(),
-      subCategoryId: subProcessName || existing.subCategoryId,
-      name: itemName || existing.name,
-      unit: unit || existing.unit,
-      isActive: existing.isActive
-    }]);
+    // Perform update using updateRows
+    const updates: Record<string, any> = {};
+    if (subProcessName) updates.subCategoryId = subProcessName;
+    if (itemName) updates.name = itemName;
+    if (unit) updates.unit = unit;
+
+    if (Object.keys(updates).length > 0) {
+      await updateRows(TABLE_NAMES.table2, updates, { filters: { id: id.toString() } });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -141,9 +133,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Missing id' }, { status: 400 });
     }
 
-    // Hard delete for master items is generally fine as estimates have snapshots.
-    const safeId = id.toString();
-    await deleteRows('MasterItems', { id: safeId });
+    await deleteRows(TABLE_NAMES.table2, { filters: { id: id.toString() } });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

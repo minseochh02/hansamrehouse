@@ -1,13 +1,13 @@
 /**
  * EGDesk User Data Configuration
- * Generated at: 2026-03-03T07:37:25.204Z
+ * Generated at: 2026-03-03T08:40:14.596Z
  *
  * This file contains type-safe definitions for your EGDesk tables.
  */
 
 export const EGDESK_CONFIG = {
   apiUrl: 'http://localhost:8080',
-  apiKey: '067db765-0957-4a8f-8d64-0fc01d9f9299',
+  apiKey: 'ee176595-5bc0-4c4d-84cf-aad2f72a9275',
 } as const;
 
 export interface TableDefinition {
@@ -32,7 +32,7 @@ export const TABLES = {
     name: 'MasterItems',
     displayName: 'MasterItems',
     description: undefined,
-    rowCount: 742,
+    rowCount: 741,
     columnCount: 5,
     columns: ['id', 'subCategoryId', 'name', 'unit', 'isActive']
   } as TableDefinition,
@@ -40,7 +40,7 @@ export const TABLES = {
     name: 'MasterSubCategories',
     displayName: 'MasterSubCategories',
     description: undefined,
-    rowCount: 63,
+    rowCount: 62,
     columnCount: 5,
     columns: ['id', 'categoryId', 'name', 'displayOrder', 'isActive']
   } as TableDefinition,
@@ -48,7 +48,7 @@ export const TABLES = {
     name: 'MasterCategories',
     displayName: 'MasterCategories',
     description: undefined,
-    rowCount: 24,
+    rowCount: 23,
     columnCount: 4,
     columns: ['id', 'name', 'displayOrder', 'isActive']
   } as TableDefinition,

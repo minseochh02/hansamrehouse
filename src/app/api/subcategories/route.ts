@@ -1,26 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeSQL, deleteRows } from '../../../../egdesk-helpers';
+import { deleteRows, queryTable, updateRows } from '../../../../egdesk-helpers';
+import { TABLE_NAMES } from '../../../../egdesk.config';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get('categoryId');
     
-    let query = 'SELECT * FROM MasterSubCategories WHERE isActive = 1';
+    const filters: Record<string, string> = { isActive: '1' };
     if (categoryId) {
-      query += ` AND categoryId = '${categoryId}'`;
+      filters.categoryId = categoryId;
     }
-    query += ' ORDER BY displayOrder, name';
     
-    const subcategories = await executeSQL(query);
+    const subcategories = await queryTable(TABLE_NAMES.table3, {
+      filters,
+      orderBy: 'displayOrder',
+      orderDirection: 'ASC'
+    });
+    
     return NextResponse.json(subcategories.rows || []);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
-
-function escapeSql(str: string) {
-  return str.replace(/'/g, "''");
 }
 
 export async function PATCH(request: NextRequest) {
@@ -31,14 +32,17 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const escapedOld = escapeSql(oldName);
-    const escapedNew = escapeSql(newName);
-    const escapedCat = escapeSql(categoryId);
-
     // 1. Update Items first
-    await executeSQL(`UPDATE MasterItems SET subCategoryId = '${escapedNew}' WHERE subCategoryId = '${escapedOld}'`);
+    await updateRows(TABLE_NAMES.table2, 
+      { subCategoryId: newName }, 
+      { filters: { subCategoryId: oldName } }
+    );
+    
     // 2. Update SubCategory name
-    await executeSQL(`UPDATE MasterSubCategories SET name = '${escapedNew}' WHERE name = '${escapedOld}' AND categoryId = '${escapedCat}'`);
+    await updateRows(TABLE_NAMES.table3, 
+      { name: newName }, 
+      { filters: { name: oldName, categoryId: categoryId } }
+    );
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -56,14 +60,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Missing name or categoryId' }, { status: 400 });
     }
 
-    const escapedName = escapeSql(name);
-    const escapedCat = escapeSql(categoryId);
-
     // 1. Delete items in this subcategory
-    await deleteRows('MasterItems', { subCategoryId: name });
+    await deleteRows(TABLE_NAMES.table2, { filters: { subCategoryId: name } });
     
     // 2. Delete subcategory
-    await deleteRows('MasterSubCategories', { name: name, categoryId: categoryId });
+    await deleteRows(TABLE_NAMES.table3, { filters: { name: name, categoryId: categoryId } });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
